@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdyenComponentMount from "@/components/AdyenComponentMount";
-import CopyButton from "@/components/CopyButton";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import Toast from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
@@ -32,14 +31,9 @@ export default function HomePage() {
 
   const loadOverview = useCallback(async () => {
     try {
-      const data = await trackedFetch("/api/adyen/account-overview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountHolderId: user.accountHolderId,
-          balanceAccountId: user.balanceAccountId,
-        }),
-      });
+      const data = await trackedFetch(
+        `/api/adyen/account-overview?balanceAccountId=${encodeURIComponent(user.balanceAccountId)}`
+      );
       setOverview(data);
       setError("");
       hasLoadedOnceRef.current = true;
@@ -48,14 +42,14 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [trackedFetch, user.accountHolderId, user.balanceAccountId]);
+  }, [trackedFetch, user.balanceAccountId]);
 
   useEffect(() => {
     loadOverview();
   }, [loadOverview]);
 
   useEffect(() => {
-    if (!user.accountHolderId || !user.balanceAccountId) return undefined;
+    if (!user.balanceAccountId) return undefined;
 
     const interval = setInterval(() => {
       loadOverview();
@@ -73,19 +67,38 @@ export default function HomePage() {
       window.removeEventListener("focus", refreshOnForeground);
       document.removeEventListener("visibilitychange", refreshOnForeground);
     };
-  }, [loadOverview, user.accountHolderId, user.balanceAccountId]);
+  }, [loadOverview, user.balanceAccountId]);
 
   const balances = useMemo(() => {
     const items = overview?.balanceAccount?.balances || [];
-    const usd = items.find((item) => item?.balance?.currency === "USD") || items[0];
+    const usd =
+      items.find((item) => (item?.currency || item?.available?.currency || item?.balance?.currency) === "USD") ||
+      items[0];
+
+    // Adyen may return scalar minor units (available: 200000) or nested objects ({ available: { value, currency } }).
+    const availableValue =
+      typeof usd?.available === "number" ? usd.available : Number(usd?.available?.value || usd?.balance?.value || 0);
+    const pendingValue =
+      typeof usd?.pending === "number" ? usd.pending : Number(usd?.pending?.value || usd?.reserved?.value || 0);
+    const currencyCode = usd?.currency || usd?.available?.currency || usd?.balance?.currency || "USD";
+
     return {
-      available: usd?.available?.value || 0,
-      pending: usd?.pending?.value || 0,
-      currency: usd?.available?.currency || "USD",
+      available: Number.isFinite(availableValue) ? availableValue : 0,
+      pending: Number.isFinite(pendingValue) ? pendingValue : 0,
+      currency: currencyCode,
     };
   }, [overview]);
 
   const showTransferButton = !loading && !error && balances.currency === "USD" && balances.available < TRANSFER_THRESHOLD_MINOR;
+  const progressToReady = Math.max(0, Math.min(100, Math.round((balances.available / TRANSFER_AMOUNT_MINOR) * 100)));
+  const portalStatusLabel =
+    loading && !hasLoadedOnceRef.current
+      ? "Syncing your balance..."
+      : error
+        ? "Connection interrupted"
+        : showTransferButton
+          ? "Low balance detected"
+          : "Balance looks healthy";
 
   const transferFunds = async () => {
     try {
@@ -97,6 +110,8 @@ export default function HomePage() {
           destinationBalanceAccountId: user.balanceAccountId,
           amountValue: TRANSFER_AMOUNT_MINOR,
           currency: "USD",
+          referenceForBeneficiary: "FundsForYourBalanceAccount",
+          description: `Top up ${user.balanceAccountId} from SPECIAL_BA`,
         }),
       });
       setToast({ type: "success", message: "Transferred $1,000 successfully." });
@@ -109,45 +124,62 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-xl bg-gradient-to-r from-[#0F1D3D] via-[#17305D] to-[#145B48] p-6 text-white shadow-sm">
-        <h1 className="text-[30px] font-semibold tracking-[-0.01em]">
-          {greetingByHour()}, {user.companyName}
-        </h1>
-        <p className="mt-1 text-sm text-white/80">Here&apos;s your account overview from KNOWN_AH.</p>
-      </section>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <section className="overflow-hidden rounded-2xl border border-[#D8DFEA] bg-gradient-to-br from-[#EEF4FF] via-white to-[#E8FFF8] p-6 shadow-sm md:p-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5E6FA8]">Portal</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.02em] text-[#0B1222] md:text-4xl">
+              {greetingByHour()}. Ready to power up your balance?
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-[#4E607C] md:text-base">
+              Keep funds flowing. Boost your balance instantly and track activity in real time.
+            </p>
+          </div>
+          <div className="w-full rounded-2xl border border-[#DCE4F2] bg-white/90 p-5 shadow-sm lg:max-w-md">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#70819D]">Balance Quest</p>
+            <p className="mt-2 text-sm font-medium text-[#2D3D5E]">{portalStatusLabel}</p>
+            <div className="mt-4">
+              {loading && !hasLoadedOnceRef.current ? (
+                <LoadingSkeleton className="h-11 w-44" />
+              ) : error ? (
+                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+              ) : (
+                <>
+                  <p className="text-4xl font-bold tracking-[-0.01em] text-[#0B1222] md:text-5xl">
+                    {formatCurrency(balances.available, balances.currency)} {balances.currency}
+                  </p>
+                  <p className="mt-2 text-sm text-[#5C6B84]">Pending: {formatCurrency(balances.pending, balances.currency)}</p>
+                </>
+              )}
+            </div>
 
-      <section className="ca-panel">
-        {loading && !hasLoadedOnceRef.current ? (
-          <LoadingSkeleton className="h-36 w-full" />
-        ) : error ? (
-          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
-        ) : (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[#70819D]">Available Balance</p>
-            <p className="mt-2 text-4xl font-bold text-[#0B1222]">
-              {formatCurrency(balances.available, balances.currency)} {balances.currency}
-            </p>
-            <p className="mt-2 text-sm text-[#5C6B84]">
-              Pending: {formatCurrency(balances.pending, balances.currency)}
-            </p>
-            {showTransferButton ? (
-              <div className="mt-4">
-                <button type="button" className="ca-button-dark" onClick={transferFunds} disabled={transferLoading}>
-                  {transferLoading ? "Transferring..." : "Transfer $1,000"}
-                </button>
+            <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.06em] text-[#70819D]">
+                <span>Fuel meter</span>
+                <span>{progressToReady}%</span>
               </div>
-            ) : null}
-            <div className="mt-4 flex flex-wrap gap-3 text-xs">
-              <div className="rounded-full border border-[#D8DFEA] bg-[#F8FAFD] px-3 py-2">
-                AH: {user.accountHolderId} <CopyButton label="Copy" value={user.accountHolderId} />
-              </div>
-              <div className="rounded-full border border-[#D8DFEA] bg-[#F8FAFD] px-3 py-2">
-                BA: {user.balanceAccountId} <CopyButton label="Copy" value={user.balanceAccountId} />
+              <div className="h-3 w-full overflow-hidden rounded-full bg-[#E5ECFA]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#4F46E5] via-[#2A8BF2] to-[#17B67A] transition-all"
+                  style={{ width: `${progressToReady}%` }}
+                />
               </div>
             </div>
-          </>
-        )}
+
+            <button
+              type="button"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-[#101E3C] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#162B56] disabled:cursor-not-allowed disabled:bg-[#8A96AD]"
+              onClick={transferFunds}
+              disabled={transferLoading || loading || !!error || balances.currency !== "USD"}
+            >
+              {transferLoading ? "Adding funds..." : "Add $1,000 Boost"}
+            </button>
+            {showTransferButton ? (
+              <p className="mt-2 text-xs text-[#4E607C]">Tip: You are below the recommended minimum. Boost now to stay ready.</p>
+            ) : null}
+          </div>
+        </div>
       </section>
 
       <section className="ca-panel-tight">

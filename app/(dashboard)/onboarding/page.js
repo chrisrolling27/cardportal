@@ -14,6 +14,18 @@ const INDUSTRY_CODE_OPTIONS = [
   { value: "5944", label: "5944 - Jewelry stores" },
 ];
 
+function industryLabelFromCode(industryCode) {
+  if (!industryCode) return "—";
+  const matched = INDUSTRY_CODE_OPTIONS.find((option) => option.value === String(industryCode));
+  return matched?.label || `${industryCode} - Unmapped MCC`;
+}
+
+function webAddressesFromBusinessLine(line) {
+  const fromWebData = Array.isArray(line?.webData) ? line.webData.map((item) => item?.webAddress).filter(Boolean) : [];
+  if (fromWebData.length) return fromWebData.join(", ");
+  return line?.webAddress || "—";
+}
+
 export default function OnboardingPage() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
@@ -116,7 +128,13 @@ export default function OnboardingPage() {
     }
   };
 
-  const existingWebAddress = (line) => line.webData?.[0]?.webAddress || line.webAddress || "—";
+  const ahReference = user?.email || "—";
+  const allBalanceAccountIds = Array.isArray(user?.balanceAccounts)
+    ? user.balanceAccounts.map((item) => item?.id).filter(Boolean)
+    : [];
+  const balanceAccountDisplay = allBalanceAccountIds.length
+    ? allBalanceAccountIds.join(", ")
+    : user?.balanceAccountId || "—";
   const canOfferCreation = !businessLinesLoading && !businessLinesError && businessLines.length === 0;
 
   return (
@@ -132,6 +150,24 @@ export default function OnboardingPage() {
         <p className="ca-muted mt-1 text-xs">
           Legal entity ID: <span className="font-semibold text-[#364761]">{legalEntityId || "—"}</span>
         </p>
+      </section>
+
+      <section className="ca-panel">
+        <h2 className="ca-section-title mb-4">Onboarding Reference Snapshot</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
+            <p className="text-xs uppercase tracking-wide text-[#6C7B96]">AH Reference (Email)</p>
+            <p className="mt-1 break-all font-medium text-[#2E3D5B]">{ahReference}</p>
+          </div>
+          <div className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
+            <p className="text-xs uppercase tracking-wide text-[#6C7B96]">Account Holder ID</p>
+            <p className="mt-1 break-all font-medium text-[#2E3D5B]">{user?.accountHolderId || "—"}</p>
+          </div>
+          <div className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm md:col-span-2">
+            <p className="text-xs uppercase tracking-wide text-[#6C7B96]">Balance Account ID(s)</p>
+            <p className="mt-1 break-all font-medium text-[#2E3D5B]">{balanceAccountDisplay}</p>
+          </div>
+        </div>
       </section>
 
       <section className="ca-panel">
@@ -185,9 +221,12 @@ export default function OnboardingPage() {
           ) : businessLines.length ? (
             businessLines.map((line) => (
               <div key={line.id} className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
-                <p className="font-medium">{line.id}</p>
-                <p className="text-[#5C6B84]">
-                  {line.industryCode} • {existingWebAddress(line)}
+                <p className="font-medium text-[#2E3D5B]">{line.id}</p>
+                <p className="mt-1 text-[#5C6B84]">
+                  Industry (MCC): <span className="font-medium text-[#364761]">{industryLabelFromCode(line.industryCode)}</span>
+                </p>
+                <p className="mt-1 text-[#5C6B84]">
+                  Website: <span className="font-medium text-[#364761]">{webAddressesFromBusinessLine(line)}</span>
                 </p>
               </div>
             ))
@@ -201,6 +240,28 @@ export default function OnboardingPage() {
               }
             />
           )}
+        </div>
+      </section>
+
+      <section className="ca-panel overflow-hidden border-[#BFD2FF] bg-gradient-to-br from-[#EEF4FF] via-[#E6EEFF] to-white shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="inline-flex rounded-full border border-[#D5E2FF] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#3957A5]">
+              Next step
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold text-[#1E3058]">Complete Hosted Onboarding</h2>
+            <p className="mt-2 max-w-2xl text-sm text-[#4E6187]">
+              Open Adyen&apos;s hosted flow to submit verification details, add transfer instruments, and accept terms so
+              your account can move toward fully enabled capabilities.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={launchHostedOnboarding}
+            className="ca-button-dark h-12 w-full px-6 text-base font-semibold shadow md:w-auto"
+          >
+            Launch Hosted Onboarding
+          </button>
         </div>
       </section>
 
@@ -243,24 +304,6 @@ export default function OnboardingPage() {
             </table>
           </div>
         )}
-      </section>
-
-      <section className="ca-panel overflow-hidden border-[#DCE7FF] bg-gradient-to-br from-[#F6F9FF] via-[#EEF4FF] to-white">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="ca-section-title">Launch Hosted Onboarding</h2>
-            <p className="ca-muted mt-2 max-w-2xl">
-              Open Adyen&apos;s hosted flow to complete KYC verification, add transfer instruments, and accept terms.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={launchHostedOnboarding}
-            className="ca-button-dark w-full md:w-auto"
-          >
-            Launch Hosted Onboarding →
-          </button>
-        </div>
       </section>
 
       <Toast toast={toast} onClose={() => setToast(null)} />

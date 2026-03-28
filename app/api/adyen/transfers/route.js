@@ -19,18 +19,21 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { destinationBalanceAccountId, amountValue, currency } = await request.json();
-    const sourceBalanceAccountId = process.env.SPECIAL_BA;
-    const balancePlatform = process.env.ADYEN_BALANCE_PLATFORM;
+    const {
+      destinationBalanceAccountId,
+      amountValue,
+      currency,
+      referenceForBeneficiary,
+      description,
+      reference,
+    } = await request.json();
+    const sourceBalanceAccountId = String(process.env.SPECIAL_BA || "").trim();
 
     if (!destinationBalanceAccountId) {
       return Response.json({ error: "destinationBalanceAccountId is required." }, { status: 400 });
     }
     if (!sourceBalanceAccountId) {
       return Response.json({ error: "SPECIAL_BA is not configured." }, { status: 500 });
-    }
-    if (!balancePlatform) {
-      return Response.json({ error: "ADYEN_BALANCE_PLATFORM is not configured." }, { status: 500 });
     }
 
     const amountMinor = Number(amountValue ?? 100000);
@@ -40,13 +43,12 @@ export async function POST(request) {
 
     const data = await adyenTransfersRequest("/transfers", "POST", {
       amount: { value: amountMinor, currency: currency || "USD" },
-      balancePlatform,
+      balanceAccountId: sourceBalanceAccountId,
       category: "internal",
       counterparty: { balanceAccountId: destinationBalanceAccountId },
-      description: "Dashboard balance top-up",
-      reference: `dashboard_transfer_${Date.now()}`,
-      source: { balanceAccountId: sourceBalanceAccountId },
-      type: "platformPayment",
+      referenceForBeneficiary: referenceForBeneficiary || "FundsForYourBalanceAccount",
+      reference: reference || crypto.randomUUID(),
+      description: description || "Transfer from SPECIAL_BA to session balance account",
     });
 
     return Response.json(data);
