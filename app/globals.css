@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-adyen-gray-50 text-adyen-black;
+}
+
+#dropin-container {
+  --adyen-sdk-color-outline-primary: #0abf53;
+  --adyen-sdk-color-label-primary: #00112c;
+}
+
