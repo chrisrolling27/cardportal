@@ -8,23 +8,16 @@ import { formatTime } from "@/lib/utils";
 export default function ApiHistoryPage() {
   const { entries, clear } = useApiHistory();
   const [selected, setSelected] = useState(null);
-  const [methodFilter, setMethodFilter] = useState({
-    GET: true,
-    POST: true,
-    PATCH: true,
-    DELETE: true,
-  });
-  const [statusFilter, setStatusFilter] = useState({
-    success: true,
-    failed: true,
-  });
+  const [methodFilter, setMethodFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
 
   const rows = useMemo(
     () =>
       entries.filter((entry) => {
-        const methodOk = methodFilter[entry.method] ?? false;
+        const methodOk = methodFilter ? entry.method === methodFilter : true;
         const okStatus = entry.status >= 200 && entry.status < 400;
-        const statusOk = okStatus ? statusFilter.success : statusFilter.failed;
+        const entryStatus = okStatus ? "success" : "failed";
+        const statusOk = statusFilter ? entryStatus === statusFilter : true;
         return methodOk && statusOk;
       }),
     [entries, methodFilter, statusFilter]
@@ -32,16 +25,16 @@ export default function ApiHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl bg-white p-6 shadow-soft">
-        <h1 className="text-2xl font-semibold">API History</h1>
+      <section className="ca-panel">
+        <h1 className="ca-title">API History</h1>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {Object.keys(methodFilter).map((method) => (
+          {["GET", "POST", "PATCH", "DELETE"].map((method) => (
             <button
               key={method}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                methodFilter[method] ? "bg-adyen-black text-white" : "bg-adyen-gray-100 text-adyen-gray-500"
+                methodFilter === method ? "bg-[#0F1D3D] text-white" : "bg-[#EEF2F7] text-[#6A7993]"
               }`}
-              onClick={() => setMethodFilter((prev) => ({ ...prev, [method]: !prev[method] }))}
+              onClick={() => setMethodFilter((prev) => (prev === method ? null : method))}
             >
               {method}
             </button>
@@ -50,51 +43,51 @@ export default function ApiHistoryPage() {
             <button
               key={key}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                statusFilter[key] ? "bg-adyen-green text-adyen-black" : "bg-adyen-gray-100 text-adyen-gray-500"
+                statusFilter === key ? "bg-[#E8F9EF] text-[#058B3C]" : "bg-[#EEF2F7] text-[#6A7993]"
               }`}
-              onClick={() => setStatusFilter((prev) => ({ ...prev, [key]: !prev[key] }))}
+              onClick={() => setStatusFilter((prev) => (prev === key ? null : key))}
             >
               {key}
             </button>
           ))}
-          <button className="ml-auto rounded-md border px-3 py-1 text-xs" onClick={clear}>
+          <button className="ca-button-secondary ml-auto px-3 py-1 text-xs" onClick={clear}>
             Clear History
           </button>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl bg-white shadow-soft">
+      <section className="ca-surface overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-adyen-gray-50 text-left text-adyen-gray-500">
+          <table className="ca-table">
+            <thead className="bg-[#F8FAFD]">
               <tr>
-                <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3">Endpoint</th>
-                <th className="px-4 py-3">Detail</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Time</th>
+                <th className="ca-th">Method</th>
+                <th className="ca-th">Endpoint</th>
+                <th className="ca-th">Detail</th>
+                <th className="ca-th">Status</th>
+                <th className="ca-th">Time</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((entry) => (
                 <tr
                   key={entry.id}
-                  className="cursor-pointer border-t border-adyen-gray-100 hover:bg-adyen-gray-50"
+                  className="cursor-pointer border-t border-[#EDF1F7] hover:bg-[#F8FAFD]"
                   onClick={() => setSelected(entry)}
                 >
-                  <td className="px-4 py-3">
+                  <td className="ca-td">
                     <MethodBadge method={entry.method} />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{entry.endpoint}</td>
-                  <td className="px-4 py-3">{entry.detail}</td>
+                  <td className="ca-td font-mono text-xs">{entry.endpoint}</td>
+                  <td className="ca-td">{entry.detail}</td>
                   <td
-                    className={`px-4 py-3 font-semibold ${
-                      entry.status < 400 ? "text-green-700" : "text-red-700"
+                    className={`ca-td font-semibold ${
+                      entry.status < 400 ? "text-[#058B3C]" : "text-[#C0392B]"
                     }`}
                   >
                     {entry.status < 400 ? `${entry.status} OK` : `${entry.status} FAIL`}
                   </td>
-                  <td className="px-4 py-3">{formatTime(entry.timestamp)}</td>
+                  <td className="ca-td">{formatTime(entry.timestamp)}</td>
                 </tr>
               ))}
             </tbody>
@@ -104,10 +97,10 @@ export default function ApiHistoryPage() {
 
       {selected ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-soft">
+          <div className="ca-surface w-full max-w-3xl p-6">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">API Call Details</h3>
-              <button onClick={() => setSelected(null)} className="rounded-md border px-3 py-1 text-sm">
+              <h3 className="ca-section-title">API Call Details</h3>
+              <button onClick={() => setSelected(null)} className="ca-button-secondary">
                 Close
               </button>
             </div>
@@ -122,7 +115,7 @@ export default function ApiHistoryPage() {
                     Copy
                   </button>
                 </div>
-                <pre className="max-h-72 overflow-auto rounded-lg bg-adyen-gray-50 p-3 text-xs">
+                <pre className="max-h-72 overflow-auto rounded-lg bg-[#F8FAFD] p-3 text-xs">
                   {JSON.stringify(selected.requestBody, null, 2)}
                 </pre>
               </div>
@@ -136,7 +129,7 @@ export default function ApiHistoryPage() {
                     Copy
                   </button>
                 </div>
-                <pre className="max-h-72 overflow-auto rounded-lg bg-adyen-gray-50 p-3 text-xs">
+                <pre className="max-h-72 overflow-auto rounded-lg bg-[#F8FAFD] p-3 text-xs">
                   {JSON.stringify(selected.responseBody, null, 2)}
                 </pre>
               </div>

@@ -25,7 +25,7 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-adyen-gray-50 p-6">{children}</main>
+      <main className="flex-1 bg-[#F4F6FA] p-6">{children}</main>
     </div>
   );
 }

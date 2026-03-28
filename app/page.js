@@ -23,11 +23,12 @@ export default function LandingPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-adyen-gray-50 via-white to-emerald-50 p-6">
+    <main className="flex min-h-screen items-center justify-center bg-[#F4F6FA] p-6">
       <div className="w-full max-w-md">
-        <h1 className="mb-4 text-center text-3xl font-semibold tracking-tight text-adyen-black">CardPortal</h1>
-        <p className="mb-6 text-center text-sm text-adyen-gray-700">
-          Balance Platform cards, payouts, capital, and reporting.
+        <p className="mb-2 text-center text-xs font-medium uppercase tracking-[0.14em] text-[#6A7993]">Adyen</p>
+        <h1 className="mb-2 text-center text-4xl font-semibold tracking-tight text-[#0B1222]">CardPortal</h1>
+        <p className="mb-6 text-center text-sm text-[#53627B]">
+          Dashboard for Balance Platform demos.
         </p>
         <LoginForm />
       </div>

@@ -5,6 +5,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "cardportal_auth_v1";
 
+function normalizeSession(data) {
+  return {
+    accountHolderId: data?.accountHolderId || "",
+    balanceAccountId: data?.balanceAccountId || "",
+    legalEntityId: data?.legalEntityId || "",
+    email: data?.email || "",
+    companyName: data?.companyName || "Business",
+    capabilities: data?.capabilities || {},
+    accountHolderStatus: data?.accountHolderStatus || "",
+    balanceAccounts: data?.balanceAccounts || [],
+  };
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [restoring, setRestoring] = useState(true);
@@ -15,8 +28,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const setSession = useCallback((nextUser) => {
-    setUser(nextUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    const session = normalizeSession(nextUser);
+    setUser(session);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   }, []);
 
   useEffect(() => {
@@ -24,21 +38,13 @@ export function AuthProvider({ children }) {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
-        const parsed = JSON.parse(raw);
+        JSON.parse(raw);
         const res = await fetch("/api/login", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: parsed.email }),
         });
         if (!res.ok) throw new Error("Unable to validate existing session.");
         const data = await res.json();
-        setUser({
-          accountHolderId: data.accountHolderId,
-          balanceAccountId: data.balanceAccountId,
-          legalEntityId: data.legalEntityId,
-          email: data.email,
-          companyName: data.companyName,
-        });
+        setUser(normalizeSession(data));
       } catch (_error) {
         localStorage.removeItem(STORAGE_KEY);
       } finally {

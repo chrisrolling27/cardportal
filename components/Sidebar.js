@@ -11,13 +11,16 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="flex h-screen w-[250px] flex-col bg-adyen-black text-white">
+    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col overflow-y-auto border-r border-[#DCE3EF] bg-[#0A1633] text-white">
       <div className="border-b border-white/10 p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-adyen-green text-2xl font-black text-adyen-black">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0ABF53] text-2xl font-black text-[#00112C]">
             A
           </div>
-          <div className="text-xl font-semibold tracking-tight">CardPortal</div>
+          <div>
+            <p className="text-lg font-semibold tracking-tight">CardPortal</p>
+            <p className="text-xs text-white/70">Dashboard</p>
+          </div>
         </div>
       </div>
 
@@ -29,9 +32,9 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-r-md border-l-4 px-3 py-2 text-sm transition ${
+                className={`block rounded-lg border-l-4 px-3 py-2.5 text-sm transition ${
                   active
-                    ? "border-adyen-green bg-white/10 text-white"
+                    ? "border-[#0ABF53] bg-white/10 text-white"
                     : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
                 }`}
               >
@@ -43,14 +46,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-white/10 p-4">
-        <p className="truncate text-xs text-white/70">{user?.email || "Not signed in"}</p>
+        <p className="truncate text-xs text-white/70">{user?.email || "Signed in via KNOWN_AH"}</p>
         <button
           type="button"
           onClick={() => {
             logout();
             router.push("/");
           }}
-          className="mt-2 w-full rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
+          className="mt-2 w-full rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
         >
           Logout
         </button>

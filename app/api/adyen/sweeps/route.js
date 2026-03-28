@@ -18,41 +18,78 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const {
+      accountHolderId,
       balanceAccountId,
       transferInstrumentId,
-      type,
       scheduleType,
-      cronExpression,
-      targetAmount,
-      triggerAmount,
+      amount,
       currency,
     } = await request.json();
 
-    if (!balanceAccountId || !transferInstrumentId) {
-      return Response.json({ error: "balanceAccountId and transferInstrumentId are required." }, { status: 400 });
+    if (!accountHolderId || !balanceAccountId || !transferInstrumentId) {
+      return Response.json(
+        { error: "accountHolderId, balanceAccountId and transferInstrumentId are required." },
+        { status: 400 }
+      );
     }
 
-    const schedule =
-      scheduleType === "cron"
-        ? { type: "cron", expression: cronExpression || "0 0 * * *" }
-        : { type: scheduleType || "daily" };
+    const allowedScheduleTypes = ["daily", "weekly", "monthly", "balance"];
+    const selectedSchedule = String(scheduleType || "daily");
+    if (!allowedScheduleTypes.includes(selectedSchedule)) {
+      return Response.json(
+        { error: "scheduleType must be one of: daily, weekly, monthly, balance." },
+        { status: 400 }
+      );
+    }
+
+    const amountMajor = Number(amount);
+    if (!Number.isFinite(amountMajor) || amountMajor < 1 || amountMajor > 1000) {
+      return Response.json({ error: "amount must be between 1 and 1000." }, { status: 400 });
+    }
+
+    const accountHolder = await adyenPlatformRequest(
+      `/accountHolders/${encodeURIComponent(accountHolderId)}`,
+      "GET"
+    );
+    const capability = accountHolder?.capabilities?.sendToTransferInstrument;
+    const eligibleTransferInstrumentIds = (capability?.transferInstruments || [])
+      .filter((instrument) => instrument?.id && instrument?.allowed !== false)
+      .map((instrument) => instrument.id);
+
+    if (!capability?.allowed) {
+      return Response.json(
+        { error: "Account holder does not have sendToTransferInstrument capability." },
+        { status: 400 }
+      );
+    }
+
+    if (!eligibleTransferInstrumentIds.includes(transferInstrumentId)) {
+      return Response.json(
+        { error: "Selected transfer instrument is not eligible for sendToTransferInstrument capability." },
+        { status: 400 }
+      );
+    }
+
+    const sweepCurrency = currency || "USD";
+    const amountMinor = Math.round(amountMajor * 100);
+    const schedule = { type: selectedSchedule };
 
     const body = {
       counterparty: { transferInstrumentId },
-      currency: currency || "USD",
+      currency: sweepCurrency,
       schedule,
-      type: type || "push",
+      type: "push",
       status: "active",
-      triggerAmount: {
-        value: Number(triggerAmount || 0),
-        currency: currency || "USD",
+      targetAmount: {
+        value: amountMinor,
+        currency: sweepCurrency,
       },
     };
 
-    if ((type || "push") === "push") {
-      body.targetAmount = {
-        value: Number(targetAmount || 0),
-        currency: currency || "USD",
+    if (selectedSchedule === "balance") {
+      body.triggerAmount = {
+        value: amountMinor,
+        currency: sweepCurrency,
       };
     }
 

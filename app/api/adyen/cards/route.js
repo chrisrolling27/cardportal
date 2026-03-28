@@ -56,3 +56,20 @@ export async function POST(request) {
   }
 }
 
+export async function PATCH(request) {
+  try {
+    const { id, status } = await request.json();
+    if (!id || !status) {
+      return Response.json({ error: "id and status are required." }, { status: 400 });
+    }
+
+    const data = await adyenPlatformRequest(`/paymentInstruments/${id}`, "PATCH", { status });
+    return Response.json(data);
+  } catch (error) {
+    return Response.json(
+      { error: error.message || "Failed to update card.", details: error.response || null },
+      { status: error.status || 500 }
+    );
+  }
+}
+

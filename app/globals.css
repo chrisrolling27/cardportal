@@ -8,7 +8,64 @@ body {
 }
 
 body {
-  @apply bg-adyen-gray-50 text-adyen-black;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  @apply bg-[#F4F6FA] text-[#0B1222] antialiased;
+}
+
+* {
+  @apply border-adyen-gray-200;
+}
+
+.ca-surface {
+  @apply rounded-xl border border-[#E4E9F2] bg-white shadow-sm;
+}
+
+.ca-panel {
+  @apply rounded-xl border border-[#E4E9F2] bg-white p-5 shadow-sm;
+}
+
+.ca-panel-tight {
+  @apply rounded-xl border border-[#E4E9F2] bg-white p-4 shadow-sm;
+}
+
+.ca-title {
+  @apply text-[28px] font-semibold tracking-[-0.01em] text-[#0B1222];
+}
+
+.ca-section-title {
+  @apply text-lg font-semibold tracking-[-0.01em] text-[#0B1222];
+}
+
+.ca-muted {
+  @apply text-sm text-[#5C6B84];
+}
+
+.ca-input {
+  @apply w-full rounded-lg border border-[#D8DFEA] bg-white px-3 py-2 text-sm text-[#0B1222] outline-none transition focus:border-[#2575FC] focus:ring-2 focus:ring-[#2575FC]/15;
+}
+
+.ca-button {
+  @apply inline-flex items-center justify-center rounded-lg border border-transparent bg-[#0ABF53] px-4 py-2 text-sm font-semibold text-[#00112C] transition hover:bg-[#099A43] disabled:cursor-not-allowed disabled:opacity-70;
+}
+
+.ca-button-dark {
+  @apply inline-flex items-center justify-center rounded-lg border border-transparent bg-[#0F1D3D] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0B1731] disabled:cursor-not-allowed disabled:opacity-70;
+}
+
+.ca-button-secondary {
+  @apply inline-flex items-center justify-center rounded-lg border border-[#D8DFEA] bg-white px-4 py-2 text-sm font-semibold text-[#1F2F4A] transition hover:bg-[#F8FAFD];
+}
+
+.ca-table {
+  @apply min-w-full text-sm;
+}
+
+.ca-th {
+  @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[#70819D];
+}
+
+.ca-td {
+  @apply px-3 py-2.5 text-sm text-[#16253F];
 }
 
 #dropin-container {

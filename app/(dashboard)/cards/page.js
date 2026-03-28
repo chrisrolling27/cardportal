@@ -100,10 +100,10 @@ export default function CardsPage() {
       return;
     }
     try {
-      const updated = await trackedFetch(`/api/adyen/cards/${selected.id}`, {
+      const updated = await trackedFetch("/api/adyen/cards", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ id: selected.id, status }),
       });
       setCards((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
       setSelected((prev) => ({ ...prev, ...updated }));
@@ -127,22 +127,22 @@ export default function CardsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="flex items-center justify-between rounded-2xl bg-white p-6 shadow-soft">
+      <section className="ca-panel flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Cards Wallet</h1>
-          <p className="mt-1 text-sm text-adyen-gray-600">{subtitle}</p>
+          <h1 className="ca-title">Cards Wallet</h1>
+          <p className="ca-muted mt-1">{subtitle}</p>
         </div>
         <button
           type="button"
           onClick={() => setCreateOpen((v) => !v)}
-          className="rounded-lg bg-adyen-green px-4 py-2 font-semibold text-adyen-black"
+          className="ca-button"
         >
           + New Card
         </button>
       </section>
 
       {createOpen ? (
-        <section className="rounded-2xl bg-white p-6 shadow-soft">
+        <section className="ca-panel">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
               <p className="text-sm font-medium">Brand</p>
@@ -154,8 +154,8 @@ export default function CardsPage() {
                     onClick={() => setForm((s) => ({ ...s, brand }))}
                     className={`rounded-md border px-3 py-2 text-sm ${
                       form.brand === brand
-                        ? "border-adyen-black bg-adyen-black text-white"
-                        : "border-adyen-gray-200"
+                        ? "border-[#0F1D3D] bg-[#0F1D3D] text-white"
+                        : "border-[#D8DFEA] bg-white text-[#1B2B48]"
                     }`}
                   >
                     {brand === "visa" ? "Visa" : "Mastercard"}
@@ -166,10 +166,10 @@ export default function CardsPage() {
             <input
               value={form.cardholderName}
               onChange={(e) => setForm((s) => ({ ...s, cardholderName: e.target.value }))}
-              className="rounded-lg border border-adyen-gray-200 px-3 py-2"
+              className="ca-input"
               placeholder="Cardholder name"
             />
-            <button type="button" onClick={createCard} className="rounded-lg bg-adyen-black px-4 py-2 text-white">
+            <button type="button" onClick={createCard} className="ca-button-dark">
               Create
             </button>
           </div>
@@ -205,21 +205,21 @@ export default function CardsPage() {
       </section>
 
       {selected ? (
-        <section className="rounded-2xl bg-white p-6 shadow-soft">
-          <h2 className="text-lg font-semibold">Card Details</h2>
+        <section className="ca-panel">
+          <h2 className="ca-section-title">Card Details</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg bg-adyen-gray-50 p-3 text-sm">
+            <div className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
               <p className="font-medium">Payment Instrument ID</p>
               <p className="mt-1 break-all">{selected.id}</p>
               <CopyButton value={selected.id} />
             </div>
-            <div className="rounded-lg bg-adyen-gray-50 p-3 text-sm">
+            <div className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
               <p className="font-medium">Status</p>
               <div className="mt-2 flex gap-2">
                 <select
                   defaultValue={statusFor(selected)}
                   onChange={(e) => updateStatus(e.target.value)}
-                  className="rounded-md border border-adyen-gray-200 px-2 py-1"
+                  className="ca-input"
                 >
                   <option value="active">active</option>
                   <option value="inactive">inactive</option>

@@ -1,5 +1,11 @@
 import "./globals.css";
 import AppProviders from "@/components/AppProviders";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
 
 export const metadata = {
   title: "CardPortal",
@@ -9,7 +15,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.variable}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
