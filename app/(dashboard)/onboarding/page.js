@@ -7,6 +7,13 @@ import Toast from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 
+const INDUSTRY_CODE_OPTIONS = [
+  { value: "45391", label: "45391 - Home furnishing stores" },
+  { value: "5734", label: "5734 - Computer software stores" },
+  { value: "5812", label: "5812 - Eating places and restaurants" },
+  { value: "5944", label: "5944 - Jewelry stores" },
+];
+
 export default function OnboardingPage() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
@@ -15,9 +22,9 @@ export default function OnboardingPage() {
   const [businessLinesError, setBusinessLinesError] = useState("");
   const [toast, setToast] = useState(null);
   const [form, setForm] = useState({
-    industryCode: "7995",
-    webAddress: "https://example.com",
-    description: "Issuing Demo",
+    industryCode: "45391",
+    webAddress: "",
+    businessName: "",
   });
   const legalEntityId = user?.legalEntityId || "";
 
@@ -52,7 +59,8 @@ export default function OnboardingPage() {
     () =>
       Object.entries(user?.capabilities || {}).map(([name, value]) => ({
         name,
-        level: value?.requestedLevel || "—",
+        // The source of truth is the Account Holder GET capability payload.
+        allowed: value?.allowed === true ? "Yes" : "No",
         status: value?.allowed ? "allowed" : value?.verificationStatus || "pending",
         problems: value?.problems || [],
       })),
@@ -87,6 +95,10 @@ export default function OnboardingPage() {
       setToast({ type: "error", message: "Missing legal entity in session data." });
       return;
     }
+    if (businessLines.length > 0) {
+      setToast({ type: "error", message: "A business line already exists for this legal entity." });
+      return;
+    }
 
     try {
       await trackedFetch("/api/adyen/legal-entity/business-lines", {
@@ -104,6 +116,9 @@ export default function OnboardingPage() {
     }
   };
 
+  const existingWebAddress = (line) => line.webData?.[0]?.webAddress || line.webAddress || "—";
+  const canOfferCreation = !businessLinesLoading && !businessLinesError && businessLines.length === 0;
+
   return (
     <div className="space-y-6">
       <section className="ca-panel">
@@ -120,7 +135,80 @@ export default function OnboardingPage() {
       </section>
 
       <section className="ca-panel">
+        <h2 className="ca-section-title mb-4">Business Line</h2>
+        {businessLinesError ? (
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            <p>{businessLinesError}</p>
+            <button type="button" onClick={fetchData} className="ca-button mt-3">
+              Retry lookup
+            </button>
+          </div>
+        ) : null}
+
+        {canOfferCreation ? (
+          <form onSubmit={createBusinessLine} className="grid gap-3 md:grid-cols-4">
+            <select
+              value={form.industryCode}
+              onChange={(e) => setForm((s) => ({ ...s, industryCode: e.target.value }))}
+              className="ca-input"
+            >
+              {INDUSTRY_CODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="url"
+              value={form.webAddress}
+              onChange={(e) => setForm((s) => ({ ...s, webAddress: e.target.value }))}
+              className="ca-input"
+              placeholder="Business Website"
+              required
+            />
+            <input
+              value={form.businessName}
+              onChange={(e) => setForm((s) => ({ ...s, businessName: e.target.value }))}
+              className="ca-input"
+              placeholder="Business Name"
+              required
+            />
+            <button type="submit" className="ca-button">
+              Create Business Line
+            </button>
+          </form>
+        ) : null}
+
+        <div className="mt-5 space-y-2">
+          {businessLinesLoading ? (
+            <p className="text-sm text-[#5C6B84]">Loading business lines...</p>
+          ) : businessLines.length ? (
+            businessLines.map((line) => (
+              <div key={line.id} className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
+                <p className="font-medium">{line.id}</p>
+                <p className="text-[#5C6B84]">
+                  {line.industryCode} • {existingWebAddress(line)}
+                </p>
+              </div>
+            ))
+          ) : (
+            <EmptyState
+              title="No business lines"
+              message={
+                businessLinesError
+                  ? "Fix the lookup issue before creating a business line."
+                  : "No existing business line found for this legal entity."
+              }
+            />
+          )}
+        </div>
+      </section>
+
+      <section className="ca-panel">
         <h2 className="ca-section-title mb-4">Capabilities</h2>
+        <p className="ca-muted mb-4 text-xs">
+          Allowed values are validated from the current Account Holder GET capability response.
+        </p>
         {capabilities.length === 0 ? (
           <EmptyState title="No capabilities found" message="Login session did not include capability data." />
         ) : (
@@ -129,7 +217,7 @@ export default function OnboardingPage() {
               <thead>
                 <tr>
                   <th className="ca-th">Capability</th>
-                  <th className="ca-th">Requested Level</th>
+                  <th className="ca-th">Allowed</th>
                   <th className="ca-th">Status</th>
                 </tr>
               </thead>
@@ -137,7 +225,7 @@ export default function OnboardingPage() {
                 {capabilities.map((cap) => (
                   <tr key={cap.name} className="border-t border-[#EDF1F7] align-top">
                     <td className="ca-td font-medium">{cap.name}</td>
-                    <td className="ca-td">{cap.level}</td>
+                    <td className="ca-td">{cap.allowed}</td>
                     <td className="ca-td">
                       <StatusBadge status={cap.status} />
                       {cap.problems?.length ? (
@@ -157,63 +245,21 @@ export default function OnboardingPage() {
         )}
       </section>
 
-      <section className="ca-panel">
-        <button
-          type="button"
-          onClick={launchHostedOnboarding}
-          className="ca-button-dark"
-        >
-          Launch Hosted Onboarding →
-        </button>
-        <p className="ca-muted mt-2">
-          Complete KYC verification, add transfer instruments, and accept terms through Adyen&apos;s hosted flow.
-        </p>
-      </section>
-
-      <section className="ca-panel">
-        <h2 className="ca-section-title mb-4">Create Business Line</h2>
-        {businessLinesError ? (
-          <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{businessLinesError}</p>
-        ) : null}
-        <form onSubmit={createBusinessLine} className="grid gap-3 md:grid-cols-4">
-          <input
-            value={form.industryCode}
-            onChange={(e) => setForm((s) => ({ ...s, industryCode: e.target.value }))}
-            className="ca-input"
-            placeholder="Industry Code"
-          />
-          <input
-            value={form.webAddress}
-            onChange={(e) => setForm((s) => ({ ...s, webAddress: e.target.value }))}
-            className="ca-input"
-            placeholder="Web Address"
-          />
-          <input
-            value={form.description}
-            onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
-            className="ca-input"
-            placeholder="Source of Funds Description"
-          />
-          <button type="submit" className="ca-button">
-            Submit
+      <section className="ca-panel overflow-hidden border-[#DCE7FF] bg-gradient-to-br from-[#F6F9FF] via-[#EEF4FF] to-white">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="ca-section-title">Launch Hosted Onboarding</h2>
+            <p className="ca-muted mt-2 max-w-2xl">
+              Open Adyen&apos;s hosted flow to complete KYC verification, add transfer instruments, and accept terms.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={launchHostedOnboarding}
+            className="ca-button-dark w-full md:w-auto"
+          >
+            Launch Hosted Onboarding →
           </button>
-        </form>
-
-        <div className="mt-5 space-y-2">
-          {businessLinesLoading ? (
-            <p className="text-sm text-[#5C6B84]">Loading business lines...</p>
-          ) : businessLines.length ? (
-            businessLines.map((line) => (
-              <div key={line.id} className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
-                <p className="font-medium">{line.id}</p>
-                <p className="text-[#5C6B84]">
-                  {line.industryCode} • {line.webAddress || "—"}
-                </p>
-              </div>
-            ))
-          ) : (
-            <EmptyState title="No business lines" message="Create your first business line above." />
-          )}
         </div>
       </section>
 

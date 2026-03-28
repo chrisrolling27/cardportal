@@ -14,7 +14,7 @@ export function ApiHistoryProvider({ children }) {
     const method = options.method || "GET";
     const timestamp = new Date().toISOString();
     const requestBody = options.body ? JSON.parse(options.body) : null;
-    const endpoint = endpointFromProxy(url);
+    const endpoint = endpointFromProxy(url, method, requestBody);
 
     try {
       const response = await fetch(url, options);

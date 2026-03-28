@@ -1,4 +1,4 @@
-import { adyenLemRequest } from "@/lib/adyen";
+import { adyenLemRequest, adyenLemV4Request } from "@/lib/adyen";
 
 export async function GET(request) {
   try {
@@ -18,16 +18,19 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { legalEntityId, industryCode, webAddress, description } = await request.json();
+    const { legalEntityId, industryCode, webAddress, businessName } = await request.json();
     if (!legalEntityId) return Response.json({ error: "legalEntityId is required." }, { status: 400 });
+    if (!industryCode) return Response.json({ error: "industryCode is required." }, { status: 400 });
+    if (!webAddress) return Response.json({ error: "webAddress is required." }, { status: 400 });
+    if (!businessName) return Response.json({ error: "businessName is required." }, { status: 400 });
 
-    const data = await adyenLemRequest("/businessLines", "POST", {
+    const data = await adyenLemV4Request("/businessLines", "POST", {
       legalEntityId,
       industryCode,
-      webAddress,
+      service: "issuing",
+      webData: [{ webAddress }],
       sourceOfFunds: {
-        type: "business",
-        description,
+        adyenProcessedFunds: true,
       },
     });
 
