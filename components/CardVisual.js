@@ -22,9 +22,16 @@ export default function CardVisual({ card, revealed, onToggleReveal, onSelect })
   );
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
       className={`w-full rounded-2xl bg-gradient-to-br ${bgStyle} p-5 text-left text-white shadow-soft`}
     >
       <div className="flex items-start justify-between">
@@ -59,7 +66,7 @@ export default function CardVisual({ card, revealed, onToggleReveal, onSelect })
           </button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 

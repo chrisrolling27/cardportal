@@ -14,6 +14,15 @@ const INDUSTRY_CODE_OPTIONS = [
   { value: "5944", label: "5944 - Jewelry stores" },
 ];
 
+const ONBOARDING_CAPABILITY_ORDER = [
+  "issueCard",
+  "useCard",
+  "receiveFromBalanceAccount",
+  "sendToBalanceAccount",
+  "receiveFromTransferInstrument",
+  "sendToTransferInstrument",
+];
+
 function industryLabelFromCode(industryCode) {
   if (!industryCode) return "—";
   const matched = INDUSTRY_CODE_OPTIONS.find((option) => option.value === String(industryCode));
@@ -68,14 +77,20 @@ export default function OnboardingPage() {
   }, [legalEntityId]);
 
   const capabilities = useMemo(
-    () =>
-      Object.entries(user?.capabilities || {}).map(([name, value]) => ({
-        name,
-        // The source of truth is the Account Holder GET capability payload.
-        allowed: value?.allowed === true ? "Yes" : "No",
-        status: value?.allowed ? "allowed" : value?.verificationStatus || "pending",
-        problems: value?.problems || [],
-      })),
+    () => {
+      const capabilityMap = user?.capabilities || {};
+
+      return ONBOARDING_CAPABILITY_ORDER.filter((name) => capabilityMap[name]).map((name) => {
+        const value = capabilityMap[name];
+        return {
+          name,
+          // The source of truth is the Account Holder GET capability payload.
+          allowed: value?.allowed === true ? "Yes" : "No",
+          status: value?.allowed ? "allowed" : value?.verificationStatus || "pending",
+          problems: value?.problems || [],
+        };
+      });
+    },
     [user?.capabilities]
   );
 
@@ -136,25 +151,24 @@ export default function OnboardingPage() {
     ? allBalanceAccountIds.join(", ")
     : user?.balanceAccountId || "—";
   const canOfferCreation = !businessLinesLoading && !businessLinesError && businessLines.length === 0;
+  const accountHolderStatus = user?.accountHolderStatus || "—";
+  const isAccountHolderActive = String(accountHolderStatus).toLowerCase() === "active";
+  const allCapabilitiesSatisfied = capabilities.length > 0 && capabilities.every((cap) => cap.allowed === "Yes");
 
   return (
     <div className="space-y-6">
       <section className="ca-panel">
-        <h1 className="ca-title">Capabilities & Onboarding</h1>
-        <p className="ca-muted mt-2">
-          Capabilities are sourced from the current KNOWN_AH login session.
-        </p>
+        <h1 className="ca-title">Onboarding</h1>
         <p className="ca-muted mt-1 text-xs">
-          Account holder status: <span className="font-semibold text-[#364761]">{user.accountHolderStatus || "—"}</span>
+          Account holder status:{" "}
+          <span className={`font-semibold ${isAccountHolderActive ? "text-green-600" : "text-red-600"}`}>
+            {accountHolderStatus}
+          </span>
         </p>
         <p className="ca-muted mt-1 text-xs">
           Legal entity ID: <span className="font-semibold text-[#364761]">{legalEntityId || "—"}</span>
         </p>
-      </section>
-
-      <section className="ca-panel">
-        <h2 className="ca-section-title mb-4">Onboarding Reference Snapshot</h2>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
             <p className="text-xs uppercase tracking-wide text-[#6C7B96]">AH Reference (Email)</p>
             <p className="mt-1 break-all font-medium text-[#2E3D5B]">{ahReference}</p>
@@ -171,7 +185,7 @@ export default function OnboardingPage() {
       </section>
 
       <section className="ca-panel">
-        <h2 className="ca-section-title mb-4">Business Line</h2>
+        <h2 className="ca-section-title mb-4">KYC Business Information</h2>
         {businessLinesError ? (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
             <p>{businessLinesError}</p>
@@ -243,16 +257,31 @@ export default function OnboardingPage() {
         </div>
       </section>
 
-      <section className="ca-panel overflow-hidden border-[#BFD2FF] bg-gradient-to-br from-[#EEF4FF] via-[#E6EEFF] to-white shadow-sm">
+      <section
+        className={`ca-panel overflow-hidden shadow-sm ${
+          allCapabilitiesSatisfied
+            ? "border-[#D6DEEE] bg-gradient-to-br from-[#F4F7FD] via-[#EEF2FA] to-white"
+            : "border-[#BFD2FF] bg-gradient-to-br from-[#EEF4FF] via-[#E6EEFF] to-white"
+        }`}
+      >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="inline-flex rounded-full border border-[#D5E2FF] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#3957A5]">
-              Next step
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold text-[#1E3058]">Complete Hosted Onboarding</h2>
+            {allCapabilitiesSatisfied ? (
+              <p className="inline-flex rounded-full border border-[#D6DEEE] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#43516B]">
+                Completed
+              </p>
+            ) : (
+              <p className="inline-flex rounded-full border border-[#D5E2FF] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#3957A5]">
+                Next step
+              </p>
+            )}
+            <h2 className="mt-3 text-2xl font-semibold text-[#1E3058]">
+              {allCapabilitiesSatisfied ? "Hosted Onboarding Complete" : "Complete Hosted Onboarding"}
+            </h2>
             <p className="mt-2 max-w-2xl text-sm text-[#4E6187]">
-              Open Adyen&apos;s hosted flow to submit verification details, add transfer instruments, and accept terms so
-              your account can move toward fully enabled capabilities.
+              {allCapabilitiesSatisfied
+                ? "Your required capabilities are already enabled. You can still reopen Adyen's hosted flow to review or update onboarding details."
+                : "Open Adyen's hosted flow to submit verification details, add transfer instruments, and accept terms so your account can move toward fully enabled capabilities."}
             </p>
           </div>
           <button
@@ -260,16 +289,13 @@ export default function OnboardingPage() {
             onClick={launchHostedOnboarding}
             className="ca-button-dark h-12 w-full px-6 text-base font-semibold shadow md:w-auto"
           >
-            Launch Hosted Onboarding
+            {allCapabilitiesSatisfied ? "Reopen Hosted Onboarding" : "Launch Hosted Onboarding"}
           </button>
         </div>
       </section>
 
       <section className="ca-panel">
         <h2 className="ca-section-title mb-4">Capabilities</h2>
-        <p className="ca-muted mb-4 text-xs">
-          Allowed values are validated from the current Account Holder GET capability response.
-        </p>
         {capabilities.length === 0 ? (
           <EmptyState title="No capabilities found" message="Login session did not include capability data." />
         ) : (
@@ -277,7 +303,7 @@ export default function OnboardingPage() {
             <table className="ca-table">
               <thead>
                 <tr>
-                  <th className="ca-th">Capability</th>
+                  <th className="ca-th">Function</th>
                   <th className="ca-th">Allowed</th>
                   <th className="ca-th">Status</th>
                 </tr>

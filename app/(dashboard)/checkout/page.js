@@ -1,252 +1,413 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { formatCurrency, generateOrderReference } from "@/lib/utils";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApiHistory } from "@/context/ApiHistoryContext";
-import LoadingSkeleton from "@/components/LoadingSkeleton";
+import { formatCurrency, formatTime, generateOrderReference } from "@/lib/utils";
+
+const ORDER_ITEMS = [
+  "Premium Widget",
+  "Flux Capacitor Upgrade",
+  "Cloud Storage (1TB)",
+  "Artisanal Coffee Subscription",
+  "Quantum Computing Credits",
+  "AI Training Token Pack",
+  "Holographic Display Module",
+  "Space Tourism Voucher",
+];
+
+function randomChoice(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function createRandomOrder() {
+  return {
+    item: randomChoice(ORDER_ITEMS),
+    amountMinor: Math.floor(Math.random() * 49901) + 100,
+    currency: "USD",
+    reference: generateOrderReference(),
+  };
+}
+
+function toClientSafePaymentPayload(payload) {
+  if (!payload || typeof payload !== "object") return {};
+  return {
+    action: payload.action,
+    order: payload.order,
+    resultCode: payload.resultCode,
+  };
+}
 
 export default function CheckoutPage() {
   const { trackedFetch } = useApiHistory();
-  const [amountInput, setAmountInput] = useState("10.00");
-  const [reference, setReference] = useState(generateOrderReference());
+  const [order, setOrder] = useState(() => createRandomOrder());
+  const [loadingDropin, setLoadingDropin] = useState(true);
+  const [initError, setInitError] = useState("");
   const [paymentResult, setPaymentResult] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState("");
+  const [attempts, setAttempts] = useState([]);
+
+  const containerRef = useRef(null);
   const dropinRef = useRef(null);
-  const amountMinorRef = useRef(0);
-  const referenceRef = useRef(reference);
+  const dropinReadyRef = useRef(false);
+  const initSequenceRef = useRef(0);
+  const restoreFetchRef = useRef(null);
 
-  const amountMinor = useMemo(() => {
-    const parsed = Number(amountInput);
-    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-    return Math.round(parsed * 100);
-  }, [amountInput]);
+  const orderAmount = useMemo(
+    () => formatCurrency(order.amountMinor, order.currency),
+    [order.amountMinor, order.currency]
+  );
 
-  useEffect(() => {
-    amountMinorRef.current = amountMinor;
-  }, [amountMinor]);
+  const addAttempt = useCallback((result) => {
+    setAttempts((prev) => [
+      {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        createdAt: new Date().toISOString(),
+        item: order.item,
+        amountMinor: order.amountMinor,
+        currency: order.currency,
+        resultCode: result?.resultCode || "Error",
+        refusalReason: result?.refusalReason || "",
+      },
+      ...prev,
+    ]);
+  }, [order.amountMinor, order.currency, order.item]);
 
-  useEffect(() => {
-    referenceRef.current = reference;
-  }, [reference]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const mountDropin = async () => {
-      setLoading(true);
-      setError("");
-      setPaymentResult(null);
+  const clearDropin = useCallback(() => {
+    if (dropinRef.current?.unmount && dropinReadyRef.current) {
       try {
-        const paymentMethodsResponse = await trackedFetch("/api/adyen/checkout/payment-methods", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: 1000, currency: "USD" }),
-        });
-
-        const { default: AdyenCheckout } = await import("@adyen/adyen-web");
-        const { Dropin } = await import("@adyen/adyen-web");
-        await import("@adyen/adyen-web/styles/adyen.css");
-
-        const checkout = await AdyenCheckout({
-          environment: "test",
-          clientKey: process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY,
-          paymentMethodsResponse,
-          onSubmit: async (state, dropin) => {
-            if (!state?.isValid) return;
-            const currentAmount = amountMinorRef.current;
-            const currentReference = referenceRef.current;
-
-            if (!currentAmount) {
-              setError("Enter a valid amount before paying.");
-              return;
-            }
-
-            setProcessing(true);
-            setError("");
-            setPaymentResult(null);
-            try {
-              const response = await trackedFetch("/api/adyen/checkout/payments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  amount: currentAmount,
-                  currency: "USD",
-                  reference: currentReference,
-                  paymentMethod: state.data.paymentMethod,
-                  browserInfo: state.data.browserInfo,
-                  origin: window.location.origin,
-                  returnUrl: `${window.location.origin}/checkout`,
-                }),
-              });
-
-              if (response.action) {
-                dropin.handleAction(response.action);
-              } else {
-                setPaymentResult({ success: response.resultCode === "Authorised", ...response });
-                setHistory((prev) => [
-                  {
-                    timestamp: new Date().toISOString(),
-                    amount: currentAmount,
-                    reference: currentReference,
-                    result: response.resultCode || "Unknown",
-                  },
-                  ...prev,
-                ]);
-              }
-            } catch (err) {
-              setPaymentResult({ success: false, resultCode: "Error", errorMessage: err.message });
-              setError(err.message || "Payment failed.");
-            } finally {
-              setProcessing(false);
-            }
-          },
-          onPaymentCompleted: (result) => {
-            const currentAmount = amountMinorRef.current;
-            const currentReference = referenceRef.current;
-            setPaymentResult({ success: result.resultCode === "Authorised", ...result });
-            setHistory((prev) => [
-              {
-                timestamp: new Date().toISOString(),
-                amount: currentAmount,
-                reference: currentReference,
-                result: result.resultCode || "Unknown",
-              },
-              ...prev,
-            ]);
-            setReference(generateOrderReference());
-            setProcessing(false);
-          },
-          onPaymentFailed: (result) => {
-            const currentAmount = amountMinorRef.current;
-            const currentReference = referenceRef.current;
-            setPaymentResult({ success: false, ...result });
-            setHistory((prev) => [
-              {
-                timestamp: new Date().toISOString(),
-                amount: currentAmount,
-                reference: currentReference,
-                result: result?.resultCode || "Failed",
-              },
-              ...prev,
-            ]);
-            setProcessing(false);
-          },
-          onError: (err) => {
-            setPaymentResult({ success: false, resultCode: "Error", errorMessage: err.message });
-            setError(err.message || "Checkout error.");
-            setProcessing(false);
-          },
-        });
-
-        if (!mounted) return;
-        dropinRef.current?.unmount?.();
-        let dropin;
-        try {
-          dropin = new Dropin(checkout, { showPayButton: true }).mount("#dropin-container");
-        } catch {
-          dropin = checkout.create("dropin", { showPayButton: true }).mount("#dropin-container");
-        }
-        dropinRef.current = dropin;
-      } catch (err) {
-        if (!mounted) return;
-        setError(err.message || "Failed to initialize checkout.");
-      } finally {
-        if (mounted) setLoading(false);
+        dropinRef.current.unmount();
+      } catch (_error) {
+        // Ignore teardown warnings when secured fields never finished configuring.
       }
+    }
+    // Do not mutate container DOM when secured fields were not fully configured yet.
+    // This avoids iframe.contentWindow teardown races during fast refresh / strict-mode remounts.
+    if (dropinReadyRef.current && containerRef.current) {
+      containerRef.current.innerHTML = "";
+    }
+    dropinReadyRef.current = false;
+    dropinRef.current = null;
+  }, []);
+
+  const initDropin = useCallback(async () => {
+    const sequence = initSequenceRef.current + 1;
+    initSequenceRef.current = sequence;
+    clearDropin();
+
+    setInitError("");
+    setLoadingDropin(true);
+    setPaymentResult(null);
+
+    try {
+      const configResponse = await trackedFetch("/api/adyen/checkout/client-key");
+      const clientKey = configResponse?.clientKey;
+      if (!clientKey) {
+        throw new Error("Missing Adyen client key.");
+      }
+
+      const paymentMethodsResponse = await trackedFetch("/api/adyen/checkout/payment-methods", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: order.amountMinor,
+          currency: order.currency,
+        }),
+      });
+
+      const adyenModule = await import("@adyen/adyen-web");
+      await import("@adyen/adyen-web/styles/adyen.css");
+
+      if (sequence !== initSequenceRef.current) return;
+
+      const createCheckout = adyenModule.default || adyenModule.AdyenCheckout;
+      if (typeof createCheckout !== "function") {
+        throw new Error("Unable to initialize AdyenCheckout from @adyen/adyen-web exports.");
+      }
+
+      const checkout = await createCheckout({
+        environment: "test",
+        clientKey,
+        analytics: {
+          enabled: false,
+          analyticsData: {
+            checkoutAttemptId: order.reference,
+          },
+        },
+        risk: {
+          enabled: false,
+        },
+        countryCode: "US",
+        locale: "en-US",
+        amount: {
+          value: order.amountMinor,
+          currency: order.currency,
+        },
+        paymentMethodsResponse,
+        onSubmit: async (state, component, actions) => {
+          try {
+            if (!state?.isValid) return;
+            const payload = await trackedFetch("/api/adyen/checkout/payments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: order.amountMinor,
+                currency: order.currency,
+                reference: order.reference,
+                stateData: state.data,
+                origin: window.location.origin,
+                returnUrl: `${window.location.origin}/checkout`,
+              }),
+            });
+
+            const safePayload = toClientSafePaymentPayload(payload);
+            if (actions?.resolve) {
+              actions.resolve(safePayload);
+            } else if (safePayload?.action) {
+              component.handleAction(safePayload.action);
+            }
+
+          } catch (error) {
+            const message = error?.message || "Payment failed.";
+            setPaymentResult({
+              status: "error",
+              resultCode: "Error",
+              refusalReason: message,
+            });
+            addAttempt({ resultCode: "Error", refusalReason: message });
+            if (actions?.reject) actions.reject();
+          }
+        },
+        onAdditionalDetails: async (state, _component, actions) => {
+          try {
+            const payload = await trackedFetch("/api/adyen/checkout/payments/details", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(state.data),
+            });
+
+            if (actions?.resolve) actions.resolve(toClientSafePaymentPayload(payload));
+
+          } catch (error) {
+            const message = error?.message || "Payment details failed.";
+            setPaymentResult({
+              status: "error",
+              resultCode: "Error",
+              refusalReason: message,
+            });
+            addAttempt({ resultCode: "Error", refusalReason: message });
+            if (actions?.reject) actions.reject();
+          }
+        },
+        onPaymentCompleted: (result) => {
+          const isAuthorised = result?.resultCode === "Authorised";
+          const resolvedResult = {
+            resultCode: result?.resultCode || "Unknown",
+            refusalReason: result?.refusalReason || "",
+          };
+          setPaymentResult({
+            status: isAuthorised ? "success" : "failed",
+            ...resolvedResult,
+          });
+          addAttempt(resolvedResult);
+        },
+        onPaymentFailed: (result) => {
+          const resolvedResult = {
+            resultCode: result?.resultCode || "Refused",
+            refusalReason: result?.refusalReason || "",
+          };
+          setPaymentResult({
+            status: "failed",
+            ...resolvedResult,
+          });
+          addAttempt(resolvedResult);
+        },
+        onError: (error) => {
+          const message = error?.message || "Drop-in error";
+          setPaymentResult({
+            status: "error",
+            resultCode: "Error",
+            refusalReason: message,
+          });
+          addAttempt({ resultCode: "Error", refusalReason: message });
+        },
+      });
+
+      if (sequence !== initSequenceRef.current) return;
+
+      const DropinCtor = adyenModule.Dropin;
+      const CardComponent = adyenModule.Card;
+      const dropinConfig = {
+        onReady: () => {
+          // Keep for overall drop-in readiness.
+        },
+        paymentMethodsConfiguration: {
+          card: {
+            hasHolderName: true,
+            holderNameRequired: true,
+            onConfigSuccess: () => {
+              // Secured fields are fully configured only after this callback.
+              dropinReadyRef.current = true;
+            },
+          },
+        },
+        paymentMethodComponents: CardComponent ? [CardComponent] : [],
+      };
+      if (DropinCtor) {
+        dropinRef.current = new DropinCtor(checkout, dropinConfig);
+      } else {
+        dropinRef.current = checkout.create("dropin", dropinConfig);
+      }
+      dropinRef.current.mount(containerRef.current);
+      setLoadingDropin(false);
+    } catch (error) {
+      if (sequence !== initSequenceRef.current) return;
+      setInitError(error.message || "Unable to initialize checkout.");
+      setLoadingDropin(false);
+    }
+  }, [addAttempt, clearDropin, order.amountMinor, order.currency, order.reference, trackedFetch]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    if (restoreFetchRef.current) return restoreFetchRef.current;
+
+    const originalFetch = window.fetch.bind(window);
+    const shimmedFetch = async (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input && typeof input === "object" && "url" in input
+            ? input.url
+            : "";
+
+      if (url.includes("checkoutanalytics-test.adyen.com/checkoutanalytics/v3/analytics")) {
+        const baseId = Date.now().toString(36);
+        const random = Math.random().toString(36).slice(2, 10);
+        const isAttemptIdRequest = /\/v3\/analytics\?/.test(url);
+        const body = isAttemptIdRequest ? { checkoutAttemptId: `local_${baseId}_${random}` } : {};
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      return originalFetch(input, init);
     };
 
-    mountDropin();
-    return () => dropinRef.current?.unmount?.();
-  }, [trackedFetch]);
+    window.fetch = shimmedFetch;
+    const restore = () => {
+      window.fetch = originalFetch;
+      restoreFetchRef.current = null;
+    };
+    restoreFetchRef.current = restore;
+    return restore;
+  }, []);
 
-  const resultCard = useMemo(() => {
-    if (!paymentResult) return null;
-    if (paymentResult.resultCode === "Authorised") {
-      return (
-        <div className="rounded-xl bg-green-50 p-4 text-green-700">
-          <p className="font-semibold">Payment Authorised ✅</p>
-          <button
-            className="mt-2 rounded-md bg-green-600 px-3 py-2 text-sm text-white"
-            onClick={() => setReference(generateOrderReference())}
-          >
-            New Reference
-          </button>
-        </div>
-      );
-    }
-    return (
-      <div className="rounded-xl bg-red-50 p-4 text-red-700">
-        <p className="font-semibold">Payment Failed: {paymentResult.resultCode || "Error"}</p>
-        <p className="text-sm">{paymentResult.refusalReason || paymentResult.errorMessage || "Please retry."}</p>
-      </div>
-    );
-  }, [paymentResult]);
+  useEffect(() => {
+    initDropin();
+    return () => {
+      // Invalidate any in-flight initialization before teardown.
+      initSequenceRef.current += 1;
+      clearDropin();
+    };
+  }, [clearDropin, initDropin]);
+
+  const randomizeOrder = () => {
+    setOrder(createRandomOrder());
+  };
 
   return (
     <div className="space-y-6">
       <section className="ca-panel">
         <h1 className="ca-title">Checkout</h1>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-[#E4E9F2] bg-[#FBFCFE] p-4">
-            <p className="text-sm text-[#5C6B84]">Amount (USD)</p>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              className="ca-input mt-2"
-              value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-            />
-            <p className="mt-3 text-xs text-[#5C6B84]">Reference</p>
-            <p className="text-xs text-[#74839C]">{reference}</p>
-            <p className="mt-4 text-xs text-[#5C6B84]">
-              Use a test card from your created cards in the `Cards` tab.
-            </p>
-            <p className="mt-2 text-sm font-semibold text-[#1B2B48]">
-              Charge amount: {formatCurrency(amountMinor, "USD")}
-            </p>
-          </div>
+        <p className="mt-1 text-sm text-[#5C6B84]">Simulate a checkout payment with Adyen Drop-in.</p>
+      </section>
 
-          <div className="rounded-xl border border-[#E4E9F2] bg-white p-4">
-            {loading ? <LoadingSkeleton className="h-64 w-full" /> : null}
-            {error ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-            {processing ? <p className="mb-3 text-xs text-[#5C6B84]">Processing payment...</p> : null}
-            <div id="dropin-container" />
+      <section className="ca-panel">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-2">
+            <h2 className="ca-section-title">CardPortal Demo Store</h2>
+            <p className="text-sm text-[#5C6B84]">Item: {order.item}</p>
+            <p className="text-sm text-[#5C6B84]">Amount: {orderAmount}</p>
+            <p className="break-all text-xs text-[#70819D]">Reference: {order.reference}</p>
           </div>
+          <button type="button" className="ca-button-dark h-10" onClick={randomizeOrder}>
+            Randomize order
+          </button>
         </div>
       </section>
 
-      {resultCard}
+      <section className="ca-panel">
+        <h2 className="ca-section-title">Pay with Drop-in</h2>
+        <div className="mt-4 rounded-xl border border-[#E4E9F2] bg-white p-4">
+          {loadingDropin ? <p className="text-sm text-[#5C6B84]">Initializing secure payment form...</p> : null}
+          {initError ? (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              <p>{initError}</p>
+              <button type="button" className="ca-button-secondary mt-3 h-9" onClick={initDropin}>
+                Retry
+              </button>
+            </div>
+          ) : null}
+          <div id="dropin-container" ref={containerRef} className={loadingDropin || initError ? "hidden" : ""} />
+        </div>
+      </section>
+
+      {paymentResult ? (
+        <section
+          className={`ca-panel ${
+            paymentResult.status === "success"
+              ? "border-green-200 bg-green-50"
+              : paymentResult.status === "failed"
+                ? "border-red-200 bg-red-50"
+                : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <h2 className="ca-section-title">
+            {paymentResult.status === "success" ? "Payment authorised" : "Payment not authorised"}
+          </h2>
+          <p className="mt-2 text-sm text-[#334155]">Result: {paymentResult.resultCode}</p>
+          {paymentResult.refusalReason ? (
+            <p className="mt-1 text-sm text-[#334155]">Detail: {paymentResult.refusalReason}</p>
+          ) : null}
+          <button type="button" className="ca-button-secondary mt-4 h-10" onClick={randomizeOrder}>
+            {paymentResult.status === "success" ? "Pay again" : "Try again"}
+          </button>
+        </section>
+      ) : null}
 
       <section className="ca-panel">
-        <h2 className="ca-section-title mb-3">Session Payment History</h2>
-        <div className="overflow-x-auto">
-          <table className="ca-table">
-            <thead>
-              <tr>
-                <th className="ca-th">Time</th>
-                <th className="ca-th">Amount</th>
-                <th className="ca-th">Reference</th>
-                <th className="ca-th">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((row, idx) => (
-                <tr key={`${row.timestamp}_${idx}`} className="border-t border-[#EDF1F7]">
-                  <td className="ca-td">{new Date(row.timestamp).toLocaleTimeString()}</td>
-                  <td className="ca-td">{formatCurrency(row.amount, "USD")}</td>
-                  <td className="ca-td">{row.reference}</td>
-                  <td className="ca-td">{row.result}</td>
+        <h2 className="ca-section-title">Session payment history</h2>
+        {attempts.length === 0 ? (
+          <p className="mt-3 text-sm text-[#5C6B84]">No payment attempts yet.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="ca-table">
+              <thead>
+                <tr>
+                  <th className="ca-th">Time</th>
+                  <th className="ca-th">Item</th>
+                  <th className="ca-th">Amount</th>
+                  <th className="ca-th">Result</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {attempts.map((attempt) => (
+                  <tr key={attempt.id} className="border-t border-[#E4E9F2]">
+                    <td className="ca-td">{formatTime(attempt.createdAt)}</td>
+                    <td className="ca-td">{attempt.item}</td>
+                    <td className="ca-td">{formatCurrency(attempt.amountMinor, attempt.currency)}</td>
+                    <td className="ca-td">
+                      <span className="font-medium">{attempt.resultCode}</span>
+                      {attempt.refusalReason ? (
+                        <span className="ml-2 text-xs text-[#5C6B84]">({attempt.refusalReason})</span>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );
 }
-

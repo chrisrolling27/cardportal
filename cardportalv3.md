@@ -231,7 +231,7 @@ GET /bcl/v2/accountHolders/{accountHolderId}
 
 The response includes a `capabilities` object. Display each capability as a row:
 
-| Capability | Requested Level | Status |
+| Name | Requested Level | Status |
 |---|---|---|
 | sendToTransferInstrument | ✅ | allowed / pending / notApplicable |
 | issueCard | ✅ | allowed / pending |

@@ -38,9 +38,13 @@ export function AuthProvider({ children }) {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
-        JSON.parse(raw);
+        const parsed = JSON.parse(raw);
         const res = await fetch("/api/login", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountHolderId: parsed?.accountHolderId || "",
+          }),
         });
         if (!res.ok) throw new Error("Unable to validate existing session.");
         const data = await res.json();

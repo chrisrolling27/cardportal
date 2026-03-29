@@ -39,7 +39,7 @@ export default function ReportsPage() {
       ) : !reportsAccountHolderId ? (
         <LoadingSkeleton className="h-64 w-full" />
       ) : (
-        <section className="ca-panel-tight">
+        <section>
           <AdyenComponentMount
             componentName="ReportsOverview"
             accountHolderId={reportsAccountHolderId}

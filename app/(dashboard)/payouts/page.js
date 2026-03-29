@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AdyenComponentMount from "@/components/AdyenComponentMount";
-import EmptyState from "@/components/EmptyState";
 import Toast from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
@@ -10,12 +9,13 @@ import { useAuth } from "@/context/AuthContext";
 export default function PayoutsPage() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
-  const [sweeps, setSweeps] = useState([]);
+  const [sweep, setSweep] = useState(null);
+  const [isLoadingSweep, setIsLoadingSweep] = useState(true);
+  const [isSubmittingSweep, setIsSubmittingSweep] = useState(false);
+  const [isDeletingSweep, setIsDeletingSweep] = useState(false);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    transferInstrumentId: "",
-    currency: "USD",
     scheduleType: "daily",
     amount: 100,
   });
@@ -28,70 +28,154 @@ export default function PayoutsPage() {
         .map((instrument) => instrument.id),
     [sendToTransferInstrumentCapability?.transferInstruments]
   );
+  const selectedTransferInstrumentId = availableTransferInstruments[0] || "";
   const canSweepToTransferInstrument =
     Boolean(sendToTransferInstrumentCapability?.allowed) && availableTransferInstruments.length > 0;
+  const hasRequiredSweepIds = Boolean(user?.balanceAccountId) && Boolean(selectedTransferInstrumentId);
+  const canCreateSweep = canSweepToTransferInstrument && hasRequiredSweepIds;
+  const hasSweep = Boolean(sweep);
+  const isFormDisabled = isLoadingSweep || isSubmittingSweep || (!hasSweep && !canCreateSweep);
+  const sweepAmount = sweep?.sweepAmount || sweep?.targetAmount || null;
+  const sweepId = sweep?.id || "";
+  const frequencyLabel = (() => {
+    const value = String(sweep?.schedule?.type || "");
+    if (!value) return "—";
+    return `${value.charAt(0).toUpperCase()}${value.slice(1).toLowerCase()}`;
+  })();
+  const targetAmountLabel =
+    typeof sweepAmount?.value === "number"
+      ? `${(sweepAmount.value / 100).toFixed(2)} ${sweepAmount.currency || ""}`.trim()
+      : "—";
 
-  const loadSweeps = async () => {
+  const loadSweep = async () => {
+    if (!user?.balanceAccountId) {
+      setSweep(null);
+      setIsLoadingSweep(false);
+      return;
+    }
     try {
+      setIsLoadingSweep(true);
       setError("");
-      const data = await trackedFetch(`/api/adyen/sweeps?balanceAccountId=${user.balanceAccountId}`);
-      setSweeps(data.sweeps || data.data || []);
+      const query = new URLSearchParams({
+        accountHolderId: user?.accountHolderId || "",
+        balanceAccountId: user.balanceAccountId,
+      });
+      const data = await trackedFetch(`/api/adyen/sweeps?${query.toString()}`);
+      setSweep(data?.sweep || null);
     } catch (err) {
       setError(err.message || "Failed to load sweeps.");
+      setToast({ type: "error", message: err.message || "Failed to load sweeps." });
+    } finally {
+      setIsLoadingSweep(false);
     }
   };
 
   useEffect(() => {
-    loadSweeps();
+    loadSweep();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.accountHolderId, user?.balanceAccountId]);
 
   useEffect(() => {
-    if (!availableTransferInstruments.length) return;
-    setForm((current) =>
-      current.transferInstrumentId
-        ? current
-        : { ...current, transferInstrumentId: availableTransferInstruments[0] }
-    );
-  }, [availableTransferInstruments]);
-
-  const createSweep = async (event) => {
-    event.preventDefault();
-    if (!canSweepToTransferInstrument) {
-      setError("Sweeps are not enabled. Missing transfer instrument capability or eligible instrument.");
+    if (!sweep) {
+      setForm({ scheduleType: "daily", amount: 100 });
       return;
     }
 
-    if (Number(form.amount) < 1 || Number(form.amount) > 1000) {
-      setError("Amount must be between 1 and 1000.");
+    const existingAmountMinor = sweep?.sweepAmount?.value ?? sweep?.targetAmount?.value;
+    const existingAmount = Number.isFinite(existingAmountMinor)
+      ? Math.max(1, Math.min(999, Math.round(existingAmountMinor / 100)))
+      : 100;
+
+    setForm({
+      scheduleType: sweep?.schedule?.type || "daily",
+      amount: existingAmount,
+    });
+  }, [sweep]);
+
+  const submitSweep = async (event) => {
+    event.preventDefault();
+
+    const amount = Number(form.amount);
+    if (!Number.isFinite(amount) || amount < 1 || amount > 999) {
+      const message = "Amount must be between 1 and 999.";
+      setError(message);
+      setToast({ type: "error", message });
+      return;
+    }
+
+    if (!hasSweep && !canCreateSweep) {
+      const message = "Unable to create sweep: missing a balance account or eligible transfer instrument.";
+      setError(message);
+      setToast({ type: "error", message });
+      return;
+    }
+
+    if (hasSweep && !sweepId) {
+      const message = "Unable to update sweep: sweep ID is missing.";
+      setError(message);
+      setToast({ type: "error", message });
       return;
     }
 
     try {
+      setIsSubmittingSweep(true);
       setError("");
       await trackedFetch("/api/adyen/sweeps", {
-        method: "POST",
+        method: hasSweep ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accountHolderId: user.accountHolderId,
-          balanceAccountId: user.balanceAccountId,
-          transferInstrumentId: form.transferInstrumentId,
+          accountHolderId: hasSweep ? undefined : user.accountHolderId,
+          sweepId: hasSweep ? sweepId : undefined,
+          balanceAccountId: user?.balanceAccountId,
+          transferInstrumentId: selectedTransferInstrumentId || sweep?.counterparty?.transferInstrumentId,
           scheduleType: form.scheduleType,
-          amount: Number(form.amount),
-          currency: form.currency,
+          amount,
         }),
       });
-      setToast({ type: "success", message: "Sweep created." });
-      loadSweeps();
+      setToast({ type: "success", message: hasSweep ? "Sweep updated." : "Sweep created." });
+      await loadSweep();
     } catch (err) {
-      setError(err.message || "Failed to create sweep.");
+      const message = err.message || (hasSweep ? "Failed to update sweep." : "Failed to create sweep.");
+      setError(message);
+      setToast({ type: "error", message });
+    } finally {
+      setIsSubmittingSweep(false);
+    }
+  };
+
+  const deleteSweep = async () => {
+    if (!sweepId || !user?.balanceAccountId) {
+      const message = "Unable to delete sweep: missing sweep or balance account ID.";
+      setError(message);
+      setToast({ type: "error", message });
+      return;
+    }
+
+    try {
+      setIsDeletingSweep(true);
+      setError("");
+      const query = new URLSearchParams({
+        balanceAccountId: user.balanceAccountId,
+        sweepId,
+      });
+      await trackedFetch(`/api/adyen/sweeps?${query.toString()}`, {
+        method: "DELETE",
+      });
+      setToast({ type: "success", message: "Sweep deleted." });
+      await loadSweep();
+    } catch (err) {
+      const message = err.message || "Failed to delete sweep.";
+      setError(message);
+      setToast({ type: "error", message });
+    } finally {
+      setIsDeletingSweep(false);
     }
   };
 
   return (
     <div className="space-y-6">
       <section className="ca-panel">
-        <h1 className="ca-title">Payouts & Sweeps</h1>
+        <h1 className="ca-title">Sweeps</h1>
         <p className="ca-muted mt-2">
           Configure a sweep to transfer instrument when your account holder has the required capability and eligible
           transfer instrument.
@@ -99,92 +183,126 @@ export default function PayoutsPage() {
       </section>
 
       <section className="ca-panel">
-        <h2 className="ca-section-title mb-4">Setup Sweeps</h2>
-        {error ? <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-        {!canSweepToTransferInstrument ? (
-          <p className="mb-4 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="ca-section-title">Sweep Configuration</h2>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              isLoadingSweep
+                ? "bg-[#EDF1F7] text-[#5F6B7A]"
+                : hasSweep
+                  ? "bg-blue-50 text-blue-700"
+                  : "bg-green-50 text-green-700"
+            }`}
+          >
+            {isLoadingSweep ? "Loading" : hasSweep ? "Sweep Configured" : "Ready to Configure"}
+          </span>
+        </div>
+
+        {error ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+
+        {!isLoadingSweep && !canSweepToTransferInstrument ? (
+          <p className="mt-4 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
             Sweeps are unavailable: this account holder must have `sendToTransferInstrument` capability and at least one
             eligible transfer instrument. Complete onboarding in Onboarding first.
           </p>
         ) : null}
-        <form className="grid gap-3 md:grid-cols-3" onSubmit={createSweep}>
-          <select
-            required
-            value={form.transferInstrumentId}
-            onChange={(e) => setForm((s) => ({ ...s, transferInstrumentId: e.target.value }))}
-            className="ca-input"
-            disabled={!canSweepToTransferInstrument}
-          >
-            {availableTransferInstruments.length ? (
-              availableTransferInstruments.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))
+        {!isLoadingSweep && canSweepToTransferInstrument && !user?.balanceAccountId ? (
+          <p className="mt-4 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+            Sweeps are unavailable because this user does not have a balance account ID in session yet.
+          </p>
+        ) : null}
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-[#EDF1F7] bg-[#FBFCFF] p-5">
+            <h3 className="text-sm font-semibold text-[#00112C]">Current Sweep</h3>
+            {isLoadingSweep ? (
+              <p className="ca-muted mt-2 text-sm">Loading sweep...</p>
+            ) : hasSweep ? (
+              <>
+                <div className="mt-4 rounded-lg border border-blue-100 bg-white p-4">
+                  <p className="ca-muted text-xs">Amount</p>
+                  <p className="mt-1 text-3xl font-semibold tracking-tight text-[#00112C]">{targetAmountLabel}</p>
+                  <p className="ca-muted mt-3 text-xs">Frequency</p>
+                  <p className="mt-1 text-xl font-semibold text-blue-700">{frequencyLabel}</p>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <dt className="ca-muted">Balance Account</dt>
+                  <dd className="truncate text-right font-medium text-[#00112C]">{user?.balanceAccountId || "—"}</dd>
+                  <dt className="ca-muted">Transfer Instrument</dt>
+                  <dd className="truncate text-right font-medium text-[#00112C]">
+                    {sweep.counterparty?.transferInstrumentId || "—"}
+                  </dd>
+                  <dt className="ca-muted">Priority</dt>
+                  <dd className="text-right font-medium text-[#00112C]">Regular</dd>
+                </dl>
+              </>
             ) : (
-              <option value="">No eligible transfer instruments</option>
+              <p className="ca-muted mt-2 text-sm">No sweep configured yet.</p>
             )}
-          </select>
-          <select
-            value={form.scheduleType}
-            onChange={(e) => setForm((s) => ({ ...s, scheduleType: e.target.value }))}
-            className="ca-input"
-            disabled={!canSweepToTransferInstrument}
-          >
-            <option value="daily">daily</option>
-            <option value="weekly">weekly</option>
-            <option value="monthly">monthly</option>
-            <option value="balance">balance</option>
-          </select>
-          <input
-            type="number"
-            min={1}
-            max={1000}
-            value={form.amount}
-            onChange={(e) => setForm((s) => ({ ...s, amount: Number(e.target.value) }))}
-            className="ca-input"
-            placeholder="Amount (1-1000)"
-            disabled={!canSweepToTransferInstrument}
-          />
-          <button type="submit" className="ca-button-dark" disabled={!canSweepToTransferInstrument}>
-            Create Sweep
-          </button>
-        </form>
-      </section>
-
-      <section className="ca-panel">
-        <h2 className="ca-section-title mb-3">Existing Sweeps</h2>
-        {sweeps.length ? (
-          <div className="overflow-x-auto">
-            <table className="ca-table">
-              <thead>
-                <tr>
-                  <th className="ca-th">ID</th>
-                  <th className="ca-th">Type</th>
-                  <th className="ca-th">Status</th>
-                  <th className="ca-th">Schedule</th>
-                  <th className="ca-th">Counterparty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sweeps.map((sweep) => (
-                  <tr key={sweep.id} className="border-t border-[#EDF1F7]">
-                    <td className="ca-td">{sweep.id}</td>
-                    <td className="ca-td">{sweep.type}</td>
-                    <td className="ca-td">{sweep.status}</td>
-                    <td className="ca-td">{sweep.schedule?.type}</td>
-                    <td className="ca-td">{sweep.counterparty?.transferInstrumentId || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        ) : (
-          <EmptyState title="No sweeps configured" message="Set one up using the section above." />
-        )}
+
+          <form onSubmit={submitSweep} className="rounded-xl border border-[#EDF1F7] bg-white p-5">
+            <h3 className="text-sm font-semibold text-[#00112C]">{hasSweep ? "Edit Sweep" : "Setup Sweep"}</h3>
+            <p className="ca-muted mt-1 text-xs">Source and destination are selected automatically for this user.</p>
+
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-lg border border-[#EDF1F7] bg-[#FBFCFF] px-3 py-2 text-sm">
+                <p className="ca-muted text-xs">Source Balance Account</p>
+                <p className="mt-1 font-medium text-[#00112C]">{user?.balanceAccountId || "Not available"}</p>
+              </div>
+              <div className="rounded-lg border border-[#EDF1F7] bg-[#FBFCFF] px-3 py-2 text-sm">
+                <p className="ca-muted text-xs">Destination Transfer Instrument</p>
+                <p className="mt-1 font-medium text-[#00112C]">{selectedTransferInstrumentId || "Not available"}</p>
+              </div>
+
+              <label className="text-xs font-medium text-[#3B4556]">Schedule</label>
+              <select
+                value={form.scheduleType}
+                onChange={(e) => setForm((s) => ({ ...s, scheduleType: e.target.value }))}
+                className="ca-input"
+                disabled={isFormDisabled}
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+
+              <label className="text-xs font-medium text-[#3B4556]">Amount (whole dollars, 1-999)</label>
+              <input
+                type="number"
+                min={1}
+                max={999}
+                value={form.amount}
+                onChange={(e) => setForm((s) => ({ ...s, amount: Number(e.target.value) }))}
+                className="ca-input"
+                placeholder="100"
+                disabled={isFormDisabled}
+              />
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button type="submit" className="ca-button-dark flex-1" disabled={isFormDisabled}>
+                {isSubmittingSweep ? "Saving..." : hasSweep ? "Save Changes" : "Create Sweep"}
+              </button>
+              {hasSweep ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                  onClick={deleteSweep}
+                  disabled={isDeletingSweep || isSubmittingSweep}
+                >
+                  {isDeletingSweep ? "Deleting..." : "Delete"}
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </div>
+
       </section>
 
-      <section className="ca-panel-tight">
+      <section>
         <AdyenComponentMount
           componentName="PayoutsOverview"
           accountHolderId={user.accountHolderId}

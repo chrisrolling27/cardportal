@@ -16,6 +16,18 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### HTTPS local dev for Adyen Drop-in
+
+To avoid browser "secure connection" warnings in card autofill and payment forms, run the app over HTTPS in local development:
+
+```bash
+npm run dev:https
+```
+
+Then open [https://localhost:3000](https://localhost:3000).
+
+If you use HTTPS locally, make sure your Adyen allowed origins include `https://localhost:3000` (in addition to `http://localhost:3000` if you still use both).
+
 You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
