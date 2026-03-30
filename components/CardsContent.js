@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CardWalletViewer from "@/components/CardWalletViewer";
+import { CardNetworkBrandMark } from "@/components/CardNetworkLogos";
 import Toast, { useToast } from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
@@ -186,13 +187,17 @@ export default function CardsContent() {
                       type="button"
                       onClick={() => setBrand(option.value)}
                       disabled={isCreating}
-                      className={`rounded-xl border p-3 text-left transition ${
+                      aria-label={option.label}
+                      aria-pressed={isSelected}
+                      className={`flex min-h-[4.5rem] items-center justify-center rounded-xl border p-3 transition ${
                         isSelected
                           ? `${option.selectedBorder} ${option.selectedBackground} ${option.selectedShadow}`
                           : "border-[#E2E8F0] bg-[#F8FAFD] hover:border-[#B8C4D9]"
                       } ${isCreating ? "cursor-not-allowed opacity-70" : ""}`}
                     >
-                      <p className="text-sm font-semibold text-[#0B1222]">{option.label}</p>
+                      <span className="flex flex-1 items-center justify-center" aria-hidden="true">
+                        <CardNetworkBrandMark brand={option.value} tone="onLight" size="picker" />
+                      </span>
                     </button>
                   );
                 })}

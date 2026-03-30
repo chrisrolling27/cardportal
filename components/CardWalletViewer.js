@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-
-function formatStatus(value) {
-  if (!value) return "active";
-  return String(value).replace(/_/g, " ").toLowerCase();
-}
+import { CardNetworkBrandMark, isVisaBrand } from "@/components/CardNetworkLogos";
 
 function cardGradient(brand) {
   const normalized = String(brand || "").toLowerCase();
@@ -14,10 +10,6 @@ function cardGradient(brand) {
     return "from-[#1A1F71] via-[#1434CB] to-[#0E1858]";
   }
   return "from-[#4B1020] via-[#8F1E35] to-[#C93A2F]";
-}
-
-function isVisaBrand(brand) {
-  return String(brand || "").toLowerCase().includes("visa");
 }
 
 function formatPan(value) {
@@ -43,19 +35,6 @@ function formatCardReference(value) {
 
 function formatPaymentInstrumentId(value) {
   return String(value || "").trim();
-}
-
-function BrandMark({ brand }) {
-  if (isVisaBrand(brand)) {
-    return <p className="text-sm font-bold italic tracking-[0.08em] text-white">VISA</p>;
-  }
-
-  return (
-    <div className="relative h-6 w-10">
-      <span className="absolute left-0 top-0 h-6 w-6 rounded-full bg-[#EB001B]/95" />
-      <span className="absolute right-0 top-0 h-6 w-6 rounded-full bg-[#F79E1B]/95 mix-blend-screen" />
-    </div>
-  );
 }
 
 const SWIPE_THRESHOLD = 48;
@@ -284,12 +263,15 @@ export default function CardWalletViewer({
                     )} ${slideDirection === "prev" ? "card-wallet-slide-in-prev" : "card-wallet-slide-in-next"} p-5 text-white shadow-[0_24px_60px_-24px_rgba(11,18,34,0.88)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_36px_80px_-30px_rgba(11,18,34,0.95)]`}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="h-10 w-14 rounded-md bg-gradient-to-br from-[#D9B45A] to-[#A68235]" />
-                      <div className="text-right">
-                        <BrandMark brand={activeCard?.card?.brand} />
-                        <p className="mt-1 text-[11px] text-white/75">
-                          {formatStatus(activeCard?.status || activeCard?.card?.status)}
-                        </p>
+                      <div className="h-10 w-14 shrink-0 rounded-md bg-gradient-to-br from-[#D9B45A] to-[#A68235]" />
+                      <div
+                        className={
+                          isVisaBrand(activeCard?.card?.brand)
+                            ? "min-w-0 shrink-0 text-right -mr-2 translate-x-2 sm:-mr-3 sm:translate-x-3"
+                            : "min-w-0 shrink-0 text-right"
+                        }
+                      >
+                        <CardNetworkBrandMark brand={activeCard?.card?.brand} tone="onDark" size="wallet" />
                       </div>
                     </div>
                     <p className="mt-8 font-mono text-[22px] tracking-[0.16em]">{cardNumber}</p>
