@@ -100,18 +100,21 @@ export default function HomePage() {
           ) : (
             <div className="grid gap-3">
               <div className="rounded-xl border border-[#E4E9F2] bg-[#FBFCFE] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#70819D]">Balance account available</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#70819D]">Balance Account</p>
                 <p className="mt-2 text-3xl font-semibold tracking-[-0.01em] text-[#0B1222]">
                   {formatCurrency(balances.available, balances.currency)}
                 </p>
                 <p className="mt-1 text-xs text-[#5C6B84]">{balances.currency}</p>
               </div>
               <div className="rounded-xl border border-[#E4E9F2] bg-[#FBFCFE] p-4 text-sm text-[#445573]">
-                <p>
-                  <span className="font-semibold text-[#1D2E4B]">AH:</span> {user.accountHolderId || "—"}
+                <p className="break-all">
+                  <span className="font-semibold text-[#1D2E4B]">Account Holder:</span> {user.accountHolderId || "—"}
                 </p>
                 <p className="mt-1 break-all">
-                  <span className="font-semibold text-[#1D2E4B]">BA:</span> {user.balanceAccountId || "—"}
+                  <span className="font-semibold text-[#1D2E4B]">Legal Entity:</span> {user.legalEntityId || "—"}
+                </p>
+                <p className="mt-1 break-all">
+                  <span className="font-semibold text-[#1D2E4B]">Balance Account:</span> {user.balanceAccountId || "—"}
                 </p>
               </div>
             </div>
@@ -125,7 +128,6 @@ export default function HomePage() {
       </section>
 
       <section>
-        <h2 className="ca-section-title mb-3">Transactions Overview</h2>
         <AdyenComponentMount
           componentName="TransactionsOverview"
           accountHolderId={user.accountHolderId}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import CardWalletViewer from "@/components/CardWalletViewer";
 import Toast, { useToast } from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
@@ -15,6 +16,9 @@ export default function CardsContent() {
   const [cardsLoading, setCardsLoading] = useState(true);
   const [cardsError, setCardsError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [revealByCardId, setRevealByCardId] = useState({});
+  const [revealLoadingByCardId, setRevealLoadingByCardId] = useState({});
+  const [revealErrorByCardId, setRevealErrorByCardId] = useState({});
 
   const loadCards = useCallback(async () => {
     if (!user?.balanceAccountId) {
@@ -28,7 +32,18 @@ export default function CardsContent() {
     setCardsError("");
     try {
       const payload = await trackedFetch(`/api/adyen/cards?balanceAccountId=${user.balanceAccountId}`);
-      setCards(payload?.paymentInstruments || []);
+      const list = payload?.paymentInstruments || [];
+      setCards(list);
+      const idSet = new Set(list.map((item) => item?.id).filter(Boolean));
+      setRevealByCardId((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([cardId]) => idSet.has(cardId)))
+      );
+      setRevealLoadingByCardId((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([cardId]) => idSet.has(cardId)))
+      );
+      setRevealErrorByCardId((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([cardId]) => idSet.has(cardId)))
+      );
     } catch (error) {
       const message = getApiErrorMessage(error);
       setCards([]);
@@ -42,6 +57,35 @@ export default function CardsContent() {
   useEffect(() => {
     loadCards();
   }, [loadCards]);
+
+  const revealCardDetails = useCallback(
+    async (paymentInstrumentId) => {
+      if (!paymentInstrumentId) return null;
+      if (revealByCardId[paymentInstrumentId]) {
+        setRevealErrorByCardId((prev) => ({ ...prev, [paymentInstrumentId]: "" }));
+        return revealByCardId[paymentInstrumentId];
+      }
+
+      setRevealLoadingByCardId((prev) => ({ ...prev, [paymentInstrumentId]: true }));
+      setRevealErrorByCardId((prev) => ({ ...prev, [paymentInstrumentId]: "" }));
+      try {
+        const payload = await trackedFetch("/api/adyen/cards/reveal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentInstrumentId }),
+        });
+        setRevealByCardId((prev) => ({ ...prev, [paymentInstrumentId]: payload }));
+        return payload;
+      } catch (error) {
+        const message = getApiErrorMessage(error);
+        setRevealErrorByCardId((prev) => ({ ...prev, [paymentInstrumentId]: message }));
+        return null;
+      } finally {
+        setRevealLoadingByCardId((prev) => ({ ...prev, [paymentInstrumentId]: false }));
+      }
+    },
+    [revealByCardId, trackedFetch]
+  );
 
   const createCard = async (event) => {
     event.preventDefault();
@@ -61,7 +105,7 @@ export default function CardsContent() {
           brand,
         }),
       });
-      showSuccess("Card created.");
+      showSuccess("Card created!");
       await loadCards();
     } catch (error) {
       const message = getApiErrorMessage(error) || "Failed to create card.";
@@ -75,7 +119,7 @@ export default function CardsContent() {
   return (
     <div className="space-y-6">
       <section className="ca-panel">
-        <h2 className="ca-section-title">Create card</h2>
+        <h2 className="ca-section-title">Issue card</h2>
         <form onSubmit={createCard} className="mt-4 grid gap-3 md:max-w-md">
           <label className="text-xs font-medium text-[#3B4556]">Brand</label>
           <select
@@ -89,35 +133,23 @@ export default function CardsContent() {
           </select>
 
           <button type="submit" className="ca-button-dark h-10 w-full" disabled={isCreating}>
-            {isCreating ? "Creating..." : "Create card"}
+            {isCreating ? "Creating..." : "Issue card"}
           </button>
         </form>
       </section>
 
-      <section className="ca-panel">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="ca-section-title">Issued cards</h2>
-          <button type="button" className="ca-button-secondary h-9" onClick={loadCards} disabled={cardsLoading}>
-            Refresh
-          </button>
-        </div>
-
-        {cardsLoading ? <p className="ca-muted mt-3 text-sm">Loading cards...</p> : null}
-        {cardsError ? <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{cardsError}</p> : null}
-        {!cardsLoading && !cardsError && cards.length === 0 ? <p className="ca-muted mt-3 text-sm">No cards issued yet.</p> : null}
-        {!cardsLoading && cards.length > 0 ? (
-          <ul className="mt-4 space-y-2">
-            {cards.map((card) => (
-              <li key={card.id} className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] px-3 py-2 text-sm">
-                <p className="font-medium text-[#00112C]">{card.id}</p>
-                <p className="mt-1 text-xs text-[#5C6B84]">
-                  {(card?.card?.brand || "card").toUpperCase()} · Last 4: {card?.card?.lastFour || "----"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+      <CardWalletViewer
+        cards={cards}
+        loading={cardsLoading}
+        error={cardsError}
+        revealByCardId={revealByCardId}
+        revealLoadingByCardId={revealLoadingByCardId}
+        revealErrorByCardId={revealErrorByCardId}
+        onRevealCardDetails={revealCardDetails}
+        onRetry={loadCards}
+        title="Wallet"
+        subtitle=""
+      />
 
       <Toast toast={toast} onClose={clearToast} />
     </div>

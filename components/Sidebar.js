@@ -13,14 +13,18 @@ export default function Sidebar() {
   return (
     <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col overflow-y-auto border-r border-[#DCE3EF] bg-[#0A1633] text-white">
       <div className="border-b border-white/10 p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0ABF53] text-2xl font-black text-[#00112C]">
-            A
-          </div>
-          <div>
-            <p className="text-lg font-semibold tracking-tight">CardPortal</p>
-            <p className="text-xs text-white/70">Dashboard</p>
-          </div>
+        <div className="flex items-center">
+          <p className="text-3xl font-extrabold tracking-tight text-white">CardPortal</p>
+          <span
+            aria-hidden="true"
+            className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#0ABF53]/45 bg-[#0ABF53]/12"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#2CEA7E]" fill="none">
+              <circle cx="12" cy="12" r="2.3" fill="currentColor" />
+              <circle cx="12" cy="12" r="6.2" stroke="currentColor" strokeWidth="1.5" opacity="0.8" />
+              <circle cx="12" cy="12" r="9.2" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+            </svg>
+          </span>
         </div>
       </div>
 

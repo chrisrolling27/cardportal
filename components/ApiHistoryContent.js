@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import MethodBadge from "@/components/MethodBadge";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { formatTime } from "@/lib/utils";
@@ -8,54 +8,15 @@ import { formatTime } from "@/lib/utils";
 export default function ApiHistoryContent() {
   const { entries, clear } = useApiHistory();
   const [selected, setSelected] = useState(null);
-  const [methodFilter, setMethodFilter] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(null);
-
-  const rows = useMemo(
-    () =>
-      entries.filter((entry) => {
-        const methodOk = methodFilter ? entry.method === methodFilter : true;
-        const okStatus = entry.status >= 200 && entry.status < 400;
-        const entryStatus = okStatus ? "success" : "failed";
-        const statusOk = statusFilter ? entryStatus === statusFilter : true;
-        return methodOk && statusOk;
-      }),
-    [entries, methodFilter, statusFilter]
-  );
 
   return (
     <div className="space-y-6">
-      <section className="ca-panel">
-        <div className="flex flex-wrap items-center gap-2">
-          {["GET", "POST", "PATCH", "DELETE"].map((method) => (
-            <button
-              key={method}
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                methodFilter === method ? "bg-[#0F1D3D] text-white" : "bg-[#EEF2F7] text-[#6A7993]"
-              }`}
-              onClick={() => setMethodFilter((prev) => (prev === method ? null : method))}
-            >
-              {method}
-            </button>
-          ))}
-          {["success", "failed"].map((key) => (
-            <button
-              key={key}
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                statusFilter === key ? "bg-[#E8F9EF] text-[#058B3C]" : "bg-[#EEF2F7] text-[#6A7993]"
-              }`}
-              onClick={() => setStatusFilter((prev) => (prev === key ? null : key))}
-            >
-              {key}
-            </button>
-          ))}
-          <button className="ca-button-secondary ml-auto px-3 py-1 text-xs" onClick={clear}>
+      <section className="ca-surface overflow-hidden">
+        <div className="flex justify-end border-b border-[#EDF1F7] p-4">
+          <button className="ca-button-secondary px-3 py-1 text-xs" onClick={clear}>
             Clear History
           </button>
         </div>
-      </section>
-
-      <section className="ca-surface overflow-hidden">
         <div className="overflow-x-auto">
           <table className="ca-table">
             <thead className="bg-[#F8FAFD]">
@@ -68,7 +29,7 @@ export default function ApiHistoryContent() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((entry) => (
+              {entries.map((entry) => (
                 <tr
                   key={entry.id}
                   className="cursor-pointer border-t border-[#EDF1F7] hover:bg-[#F8FAFD]"

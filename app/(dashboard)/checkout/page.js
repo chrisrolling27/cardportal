@@ -5,6 +5,7 @@ import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 import CardWalletViewer from "@/components/CardWalletViewer";
 import PageHeader from "@/components/PageHeader";
+import Toast, { useToast } from "@/components/Toast";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { formatCurrency, formatTime, generateOrderReference } from "@/lib/utils";
 
@@ -124,7 +125,7 @@ function createRandomItem() {
 function createRandomOrder() {
   return {
     item: createRandomItem(),
-    amountMinor: Math.floor(Math.random() * 45001) + 5000,
+    amountMinor: Math.floor(Math.random() * 37401) + 2500,
     currency: "USD",
     reference: generateOrderReference(),
   };
@@ -145,9 +146,25 @@ function resolvePaymentStatus(resultCode) {
   return "failed";
 }
 
+function getAvailableBalanceSnapshot(balanceAccount) {
+  const items = balanceAccount?.balances || [];
+  const usd =
+    items.find((item) => (item?.currency || item?.available?.currency || item?.balance?.currency) === "USD") ||
+    items[0];
+  const availableValue =
+    typeof usd?.available === "number" ? usd.available : Number(usd?.available?.value || usd?.balance?.value || 0);
+  const currency = usd?.currency || usd?.available?.currency || usd?.balance?.currency || "USD";
+
+  return {
+    availableMinor: Number.isFinite(availableValue) ? availableValue : 0,
+    currency,
+  };
+}
+
 export default function CheckoutPage() {
   const { trackedFetch } = useApiHistory();
   const { user } = useAuth();
+  const { toast, clearToast, showSuccess, showError } = useToast();
   const [order, setOrder] = useState(() => createRandomOrder());
   const [loadingDropin, setLoadingDropin] = useState(true);
   const [initError, setInitError] = useState("");
@@ -185,6 +202,48 @@ export default function CheckoutPage() {
       ...prev,
     ]);
   }, [order.amountMinor, order.currency, order.item]);
+
+  const resolveFailureReason = useCallback(
+    async ({ result, error, context }) => {
+      const resultCode = result?.resultCode || "Error";
+      const refusalReason = result?.refusalReason || "";
+      const baseMessage =
+        refusalReason || getApiErrorMessage(error) || (resultCode !== "Error" ? `Payment ${resultCode}.` : "Payment failed.");
+      let userMessage = baseMessage;
+      const failureDetails = {
+        context,
+        resultCode,
+        refusalReason,
+        orderReference: order.reference,
+        orderAmountMinor: order.amountMinor,
+        orderCurrency: order.currency,
+      };
+
+      if (user?.balanceAccountId && order.currency === "USD") {
+        try {
+          const overview = await trackedFetch(
+            `/api/adyen/account-overview?balanceAccountId=${encodeURIComponent(user.balanceAccountId)}`
+          );
+          const { availableMinor, currency } = getAvailableBalanceSnapshot(overview?.balanceAccount);
+          failureDetails.latestBalanceMinor = availableMinor;
+          failureDetails.latestBalanceCurrency = currency;
+          if (currency === order.currency && availableMinor < order.amountMinor) {
+            userMessage = "Insufficient balance";
+          }
+        } catch (balanceError) {
+          failureDetails.balanceCheckError = getApiErrorMessage(balanceError);
+        }
+      }
+
+      return {
+        resultCode,
+        refusalReason: baseMessage,
+        userMessage,
+        failureDetails,
+      };
+    },
+    [order.amountMinor, order.currency, order.reference, trackedFetch, user?.balanceAccountId]
+  );
 
   const loadCards = useCallback(async () => {
     if (!user?.balanceAccountId) {
@@ -316,13 +375,19 @@ export default function CheckoutPage() {
             }
 
           } catch (error) {
-            const message = error?.message || "Payment failed.";
+            const failure = await resolveFailureReason({ error, context: "onSubmit" });
             setPaymentResult({
               status: "error",
-              resultCode: "Error",
-              refusalReason: message,
+              resultCode: failure.resultCode,
+              refusalReason: failure.userMessage,
             });
-            addAttempt({ resultCode: "Error", refusalReason: message });
+            addAttempt({ resultCode: failure.resultCode, refusalReason: failure.userMessage });
+            showError(`Payment failed: ${failure.userMessage}`);
+            console.error("Checkout payment failed", {
+              userMessage: failure.userMessage,
+              ...failure.failureDetails,
+              rawError: error,
+            });
             if (actions?.reject) actions.reject();
           }
         },
@@ -337,13 +402,19 @@ export default function CheckoutPage() {
             if (actions?.resolve) actions.resolve(toClientSafePaymentPayload(payload));
 
           } catch (error) {
-            const message = error?.message || "Payment details failed.";
+            const failure = await resolveFailureReason({ error, context: "onAdditionalDetails" });
             setPaymentResult({
               status: "error",
-              resultCode: "Error",
-              refusalReason: message,
+              resultCode: failure.resultCode,
+              refusalReason: failure.userMessage,
             });
-            addAttempt({ resultCode: "Error", refusalReason: message });
+            addAttempt({ resultCode: failure.resultCode, refusalReason: failure.userMessage });
+            showError(`Payment failed: ${failure.userMessage}`);
+            console.error("Checkout payment details failed", {
+              userMessage: failure.userMessage,
+              ...failure.failureDetails,
+              rawError: error,
+            });
             if (actions?.reject) actions.reject();
           }
         },
@@ -359,17 +430,41 @@ export default function CheckoutPage() {
             ...resolvedResult,
           });
           addAttempt(resolvedResult);
+          if (status === "success") {
+            showSuccess(`Payment successful: ${formatCurrency(order.amountMinor, order.currency)}.`);
+            return;
+          }
+          if (status === "failed") {
+            const failureMessage = resolvedResult.refusalReason || `Payment ${resultCode}.`;
+            showError(`Payment failed: ${failureMessage}`);
+            console.error("Checkout payment not authorised", {
+              context: "onPaymentCompleted",
+              resultCode,
+              refusalReason: resolvedResult.refusalReason,
+              orderReference: order.reference,
+              orderAmountMinor: order.amountMinor,
+              orderCurrency: order.currency,
+              rawResult: result,
+            });
+          }
         },
-        onPaymentFailed: (result) => {
+        onPaymentFailed: async (result) => {
+          const failure = await resolveFailureReason({ result, context: "onPaymentFailed" });
           const resolvedResult = {
-            resultCode: result?.resultCode || "Refused",
-            refusalReason: result?.refusalReason || "",
+            resultCode: failure.resultCode || "Refused",
+            refusalReason: failure.userMessage,
           };
           setPaymentResult({
             status: "failed",
             ...resolvedResult,
           });
           addAttempt(resolvedResult);
+          showError(`Payment failed: ${failure.userMessage}`);
+          console.error("Checkout payment failed", {
+            userMessage: failure.userMessage,
+            ...failure.failureDetails,
+            rawResult: result,
+          });
         },
         onError: (error) => {
           const message = error?.message || "Drop-in error";
@@ -379,6 +474,15 @@ export default function CheckoutPage() {
             refusalReason: message,
           });
           addAttempt({ resultCode: "Error", refusalReason: message });
+          showError(`Payment error: ${message}`);
+          console.error("Checkout drop-in error", {
+            context: "onError",
+            orderReference: order.reference,
+            orderAmountMinor: order.amountMinor,
+            orderCurrency: order.currency,
+            message,
+            rawError: error,
+          });
         },
       });
 
@@ -414,7 +518,17 @@ export default function CheckoutPage() {
       setInitError(error.message || "Unable to initialize checkout.");
       setLoadingDropin(false);
     }
-  }, [addAttempt, clearDropin, order.amountMinor, order.currency, order.reference, trackedFetch]);
+  }, [
+    addAttempt,
+    clearDropin,
+    order.amountMinor,
+    order.currency,
+    order.reference,
+    resolveFailureReason,
+    showError,
+    showSuccess,
+    trackedFetch,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -503,6 +617,7 @@ export default function CheckoutPage() {
       <PageHeader title="Checkout" subtitle="Simulate a checkout purchase with your issued card" />
 
       <section className="ca-panel">
+        <h2 className="ca-section-title">Order</h2>
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="w-full max-w-2xl rounded-lg bg-[#F8FAFD] p-4">
             <div className="space-y-2">
@@ -526,12 +641,12 @@ export default function CheckoutPage() {
         revealErrorByCardId={revealErrorByCardId}
         onRevealCardDetails={revealCardDetails}
         onRetry={loadCards}
-        title="Card Wallet"
+        title="Wallet"
         subtitle=""
       />
 
       <section className="ca-panel">
-        <h2 className="ca-section-title">Checkout with the Drop-in Component</h2>
+        <h2 className="ca-section-title">Checkout</h2>
         <div className="mt-4 rounded-xl border border-[#E4E9F2] bg-white p-4">
           {loadingDropin ? <p className="text-sm text-[#5C6B84]">Initializing secure payment form...</p> : null}
           {initError ? (
@@ -609,6 +724,8 @@ export default function CheckoutPage() {
           </div>
         )}
       </section>
+
+      <Toast toast={toast} onClose={clearToast} />
     </div>
   );
 }

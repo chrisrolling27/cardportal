@@ -37,7 +37,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reports" subtitle="Review your payout report with the Reports component" />
+      <PageHeader title="Reports" subtitle="Access your Payout report" />
 
       {error ? (
         <div className="space-y-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
