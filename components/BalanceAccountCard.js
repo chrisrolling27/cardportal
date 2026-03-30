@@ -1,0 +1,170 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { formatCurrency } from "@/lib/utils";
+
+const COPY_RESET_MS = 1500;
+
+const MUTED = "text-[#70819D]";
+const BORDER = "border-[#E4E9F2]";
+const TILE_BG = "bg-[#F8FAFD]";
+const PANEL =
+  "h-full min-h-0 flex flex-col rounded-xl border border-[#E4E9F2] bg-white p-5 shadow-sm";
+
+function MetricTile({ label, value }) {
+  return (
+    <div className={`min-w-0 w-full rounded-md ${TILE_BG} p-3`}>
+      <p className={`text-[11px] ${MUTED}`}>{label}</p>
+      <p className="mt-0.5 truncate text-base font-medium tabular-nums text-[#0B1222]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+export default function BalanceAccountCard({
+  balanceMinorUnits,
+  availableMinorUnits,
+  pendingMinorUnits = 0,
+  currency = "USD",
+  cardsIssued = 0,
+  cardsCapacity = 4,
+  balanceAccountId,
+  accountHolderId,
+  legalEntityId,
+  className = "",
+}) {
+  const [copiedKey, setCopiedKey] = useState("");
+  const resetTimerRef = useRef(null);
+
+  const clearResetTimer = useCallback(() => {
+    if (resetTimerRef.current) {
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearResetTimer();
+    };
+  }, [clearResetTimer]);
+
+  const copyValue = useCallback(
+    async (key, value) => {
+      if (!value) return;
+
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(value);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = value;
+          textarea.setAttribute("readonly", "");
+          textarea.style.position = "absolute";
+          textarea.style.left = "-9999px";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+
+        setCopiedKey(key);
+        clearResetTimer();
+        resetTimerRef.current = window.setTimeout(() => {
+          setCopiedKey("");
+          resetTimerRef.current = null;
+        }, COPY_RESET_MS);
+      } catch {
+        // Intentionally silent. We keep the UI stable if clipboard access is blocked.
+      }
+    },
+    [clearResetTimer]
+  );
+
+  const ids = [
+    { key: "balance", label: "Balance account ID", value: balanceAccountId || "—" },
+    { key: "holder", label: "Account holder ID", value: accountHolderId || "—" },
+    { key: "legal", label: "Legal entity ID", value: legalEntityId || "—" },
+  ];
+
+  const ccy = currency || "USD";
+
+  return (
+    <div className={`w-full ${PANEL} ${className}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-2">
+          <span
+            className="h-2 w-2 shrink-0 rounded-full bg-[#1D9E75]"
+            aria-hidden
+          />
+          <p
+            className={`text-[11px] font-medium uppercase tracking-[0.05em] ${MUTED}`}
+          >
+            BALANCE ACCOUNT
+          </p>
+        </div>
+        <span className="shrink-0 rounded bg-[#E1F5EE] py-0.5 px-2.5 text-xs font-medium text-[#1D9E75]">
+          Active
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1.5">
+        <p className={`text-xs font-medium ${MUTED}`}>Available balance</p>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <p className="text-4xl font-medium leading-none tracking-tight text-[#0B1222] tabular-nums">
+            {formatCurrency(availableMinorUnits, ccy)}
+          </p>
+          <span className={`text-sm ${MUTED}`}>{ccy}</span>
+        </div>
+      </div>
+
+      <div className="mt-5 mb-4 grid w-full auto-cols-fr grid-flow-col gap-3">
+        <MetricTile label="Balance" value={formatCurrency(balanceMinorUnits, ccy)} />
+        <MetricTile label="Pending" value={formatCurrency(pendingMinorUnits, ccy)} />
+        <MetricTile
+          label="Cards issued"
+          value={`${cardsIssued}/${cardsCapacity}`}
+        />
+      </div>
+
+      <div className={`mt-auto border-t ${BORDER} pt-3`}>
+        <div className="space-y-2">
+          {ids.map((item) => {
+            const isCopied = copiedKey === item.key;
+            const canCopy = item.value !== "—";
+            return (
+              <div key={item.key} className="flex items-center justify-between gap-4">
+                <p className={`text-xs ${MUTED}`}>{item.label}</p>
+                <button
+                  type="button"
+                  onClick={() => copyValue(item.key, canCopy ? item.value : "")}
+                  className={`max-w-[55%] text-right font-mono text-[11px] transition-colors ${
+                    canCopy
+                      ? isCopied
+                        ? "cursor-pointer text-[#0B8A3A]"
+                        : "cursor-pointer text-[#5C6B84] hover:text-[#1F2F4A]"
+                      : "cursor-not-allowed text-[#9AA8BF]"
+                  }`}
+                  disabled={!canCopy}
+                  aria-label={`Copy ${item.label}`}
+                >
+                  <span className="break-all">{item.value}</span>
+                  {isCopied ? (
+                    <>
+                      <span
+                        className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#0B8A3A]"
+                        aria-hidden
+                      />
+                      <span className="sr-only">Copied</span>
+                    </>
+                  ) : null}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

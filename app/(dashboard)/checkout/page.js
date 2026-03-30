@@ -412,7 +412,9 @@ export default function CheckoutPage() {
             ...resolvedResult,
           });
           if (status === "success") {
-            showSuccess(`Payment successful: ${formatCurrency(order.amountMinor, order.currency)}.`);
+            showSuccess(
+              `Payment succesful! Order purchase ${order.reference} for ${formatCurrency(order.amountMinor, order.currency)}.`
+            );
             return;
           }
           if (status === "failed") {

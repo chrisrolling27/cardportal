@@ -60,8 +60,9 @@ export async function POST(request) {
     }
 
     const amountMajor = Number(amount);
-    if (!Number.isFinite(amountMajor) || amountMajor < 1 || amountMajor > 999) {
-      return Response.json({ error: "amount must be between 1 and 999." }, { status: 400 });
+    const amountMinor = Math.round(amountMajor * 100);
+    if (!Number.isFinite(amountMinor) || amountMinor < 100 || amountMinor > 999_999) {
+      return Response.json({ error: "amount must be between 1 and 9999.99." }, { status: 400 });
     }
 
     const providedReference = String(reference || "").trim();
@@ -110,7 +111,6 @@ export async function POST(request) {
     }
 
     const sweepCurrency = String(currency || "USD").toUpperCase();
-    const amountMinor = Math.round(amountMajor * 100);
     const schedule = { type: selectedSchedule };
 
     const body = {
@@ -163,12 +163,12 @@ export async function PATCH(request) {
     }
 
     const amountMajor = Number(amount);
-    if (!Number.isFinite(amountMajor) || amountMajor < 1 || amountMajor > 999) {
-      return Response.json({ error: "amount must be between 1 and 999." }, { status: 400 });
+    const amountMinor = Math.round(amountMajor * 100);
+    if (!Number.isFinite(amountMinor) || amountMinor < 100 || amountMinor > 999_999) {
+      return Response.json({ error: "amount must be between 1 and 9999.99." }, { status: 400 });
     }
 
     const sweepCurrency = String(currency || "USD").toUpperCase();
-    const amountMinor = Math.round(amountMajor * 100);
 
     const body = {
       schedule: { type: selectedSchedule },

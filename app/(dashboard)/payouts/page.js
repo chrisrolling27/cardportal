@@ -18,7 +18,7 @@ export default function PayoutsPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     scheduleType: "daily",
-    amount: 100,
+    amount: "100.00",
   });
 
   const sendToTransferInstrumentCapability = user?.capabilities?.sendToTransferInstrument || {};
@@ -43,8 +43,14 @@ export default function PayoutsPage() {
     if (!value) return "—";
     return `${value.charAt(0).toUpperCase()}${value.slice(1).toLowerCase()}`;
   })();
-  const targetAmountLabel =
-    typeof sweepAmount?.value === "number" ? `$${(sweepAmount.value / 100).toFixed(2)}` : "—";
+  const targetAmountMajor =
+    typeof sweepAmount?.value === "number" ? sweepAmount.value / 100 : null;
+  const targetAmountFormatted =
+    targetAmountMajor != null
+      ? new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+          targetAmountMajor
+        )
+      : null;
 
   const loadSweep = async () => {
     if (!user?.balanceAccountId) {
@@ -77,14 +83,15 @@ export default function PayoutsPage() {
 
   useEffect(() => {
     if (!sweep) {
-      setForm({ scheduleType: "daily", amount: 100 });
+      setForm({ scheduleType: "daily", amount: "100.00" });
       return;
     }
 
     const existingAmountMinor = sweep?.sweepAmount?.value ?? sweep?.targetAmount?.value;
-    const existingAmount = Number.isFinite(existingAmountMinor)
-      ? Math.max(1, Math.min(999, Math.round(existingAmountMinor / 100)))
-      : 100;
+    const existingAmount =
+      Number.isFinite(existingAmountMinor) && existingAmountMinor >= 100 && existingAmountMinor <= 999_999
+        ? (existingAmountMinor / 100).toFixed(2)
+        : "100.00";
 
     setForm({
       scheduleType: sweep?.schedule?.type || "daily",
@@ -95,13 +102,15 @@ export default function PayoutsPage() {
   const submitSweep = async (event) => {
     event.preventDefault();
 
-    const amount = Number(form.amount);
-    if (!Number.isFinite(amount) || amount < 1 || amount > 999) {
-      const message = "Amount must be between 1 and 999.";
+    const amountNumber = Number.parseFloat(String(form.amount));
+    const amountMinorRounded = Number.isFinite(amountNumber) ? Math.round(amountNumber * 100) : NaN;
+    if (!Number.isFinite(amountMinorRounded) || amountMinorRounded < 100 || amountMinorRounded > 999_999) {
+      const message = "Amount must be between 1 and 9999.99.";
       setError(message);
       showError(message);
       return;
     }
+    const amount = amountNumber;
 
     if (!hasSweep && !canCreateSweep) {
       const message = "Unable to create sweep: missing a balance account or eligible transfer instrument.";
@@ -218,7 +227,28 @@ export default function PayoutsPage() {
               <>
                 <div className="mt-4 rounded-lg border border-blue-100 bg-white p-4">
                   <p className="ca-muted text-xs">Amount</p>
-                  <p className="mt-1 text-3xl font-semibold tracking-tight text-[#00112C]">{targetAmountLabel}</p>
+                  <p
+                    className="mt-1 flex items-baseline gap-1.5"
+                    aria-label={
+                      targetAmountFormatted ? `${targetAmountFormatted} US dollars` : undefined
+                    }
+                  >
+                    {targetAmountFormatted ? (
+                      <>
+                        <span
+                          className="text-3xl font-semibold tracking-tight text-[#00112C]"
+                          aria-hidden="true"
+                        >
+                          $
+                        </span>
+                        <span className="text-3xl font-semibold tracking-tight text-[#00112C]">
+                          {targetAmountFormatted}
+                        </span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </p>
                   <p className="ca-muted mt-3 text-xs">Frequency</p>
                   <p className="mt-1 text-xl font-semibold text-blue-700">{frequencyLabel}</p>
                 </div>
@@ -266,28 +296,32 @@ export default function PayoutsPage() {
                 <option value="monthly">Monthly</option>
               </select>
 
-              <label className="text-xs font-medium text-[#3B4556]">Amount ($1 - $999)</label>
-              <input
-                type="number"
-                min={1}
-                max={999}
-                value={form.amount}
-                onChange={(e) => {
-                  const nextValue = Number(e.target.value);
-                  const boundedAmount = Number.isFinite(nextValue)
-                    ? Math.max(1, Math.min(999, Math.round(nextValue)))
-                    : 1;
-                  setForm((s) => ({ ...s, amount: boundedAmount }));
-                }}
-                className="ca-input"
-                placeholder="$100"
-                disabled={isFormDisabled}
-              />
+              <label className="text-xs font-medium text-[#3B4556]">Amount</label>
+              <div className="flex min-h-[42px] overflow-hidden rounded-lg border border-[#D8DFEA] bg-white transition focus-within:border-[#2575FC] focus-within:ring-2 focus-within:ring-[#2575FC]/15">
+                <span
+                  className="flex shrink-0 items-center border-r border-[#D8DFEA] bg-[#FBFCFF] px-3 text-sm font-medium text-[#5C6B84]"
+                  aria-hidden="true"
+                >
+                  $
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={9999.99}
+                  step={0.01}
+                  value={form.amount}
+                  onChange={(e) => setForm((s) => ({ ...s, amount: e.target.value }))}
+                  className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-[#0B1222] outline-none"
+                  placeholder="0.00"
+                  disabled={isFormDisabled}
+                  aria-label="Sweep amount in US dollars"
+                />
+              </div>
             </div>
 
             <div className="mt-4 flex gap-2">
               <button type="submit" className="ca-button-dark flex-1" disabled={isFormDisabled}>
-                {isSubmittingSweep ? "Saving..." : hasSweep ? "Save Changes" : "Create Sweep"}
+                {isSubmittingSweep ? "Saving..." : hasSweep ? "Edit Sweep" : "Create Sweep"}
               </button>
               {hasSweep ? (
                 <button

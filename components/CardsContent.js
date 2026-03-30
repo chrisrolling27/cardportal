@@ -53,6 +53,7 @@ export default function CardsContent() {
   const cardsCount = cards.length;
   const availableSlots = Math.max(MAX_PAYMENT_INSTRUMENTS - cardsCount, 0);
   const canCreateMoreCards = availableSlots > 0;
+  const isIssueCardDisabled = isCreating || !canCreateMoreCards;
   const selectedBrandConfig = useMemo(
     () => CARD_BRANDS.find((item) => item.value === brand) || CARD_BRANDS[0],
     [brand]
@@ -127,6 +128,7 @@ export default function CardsContent() {
 
   const createCard = async (event) => {
     event.preventDefault();
+    if (!canCreateMoreCards) return;
     if (!user?.balanceAccountId) {
       showError("Missing balance account ID in session.");
       return;
@@ -173,9 +175,6 @@ export default function CardsContent() {
             <div className="rounded-2xl bg-white p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]">Network</p>
-                <p className="text-xs font-semibold text-[#334155]">
-                  {cardsCount}/{MAX_PAYMENT_INSTRUMENTS} issued
-                </p>
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -211,7 +210,7 @@ export default function CardsContent() {
                 <div
                   key={`slot-${index}`}
                   className={`h-2 rounded-full ${
-                    isFilled ? slotBrandConfig?.slotFill || selectedBrandConfig.slotFill : "bg-[#E2E8F0]"
+                    isFilled ? slotBrandConfig?.slotFill || "bg-[#64748B]" : "bg-[#E2E8F0]"
                   }`}
                   aria-hidden="true"
                 />
@@ -234,14 +233,18 @@ export default function CardsContent() {
             />
           </div>
 
-          <button
-            type="submit"
-            className="ca-button-dark h-10 w-full md:max-w-md"
-            disabled={isCreating}
-          >
-            {isCreating ? "Creating..." : "Issue payment instrument"}
-          </button>
-          {!canCreateMoreCards ? <p className="text-sm text-[#5C6B84]">Limit reached on this account (4/4).</p> : null}
+          <div className="w-full md:max-w-md">
+            <button type="submit" className="ca-button-dark h-10 w-full" disabled={isIssueCardDisabled}>
+              {isCreating ? "Creating..." : "Issue payment instrument"}
+            </button>
+            <p
+              className={`mt-2 text-right text-xs font-semibold ${
+                isIssueCardDisabled ? "text-[#94A3B8]" : "text-[#334155]"
+              }`}
+            >
+              {cardsCount}/{MAX_PAYMENT_INSTRUMENTS} issued
+            </p>
+          </div>
         </form>
       </section>
 

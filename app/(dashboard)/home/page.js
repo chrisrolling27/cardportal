@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdyenComponentMount from "@/components/AdyenComponentMount";
+import BalanceAccountCard from "@/components/BalanceAccountCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import MainAccountTransfer from "@/components/MainAccountTransfer";
 import PageHeader from "@/components/PageHeader";
 import Toast, { useToast } from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
-import { formatCurrency } from "@/lib/utils";
 
 const OVERVIEW_REFRESH_MS = 10000;
 
@@ -16,6 +16,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
   const [overview, setOverview] = useState(null);
+  const [cardsIssued, setCardsIssued] = useState(0);
   const [loading, setLoading] = useState(true);
   const { toast, clearToast, showSuccess, showError } = useToast();
   const [error, setError] = useState("");
@@ -23,10 +24,16 @@ export default function HomePage() {
 
   const loadOverview = useCallback(async () => {
     try {
-      const data = await trackedFetch(
-        `/api/adyen/account-overview?balanceAccountId=${encodeURIComponent(user.balanceAccountId)}`
-      );
+      const balanceAccountId = user.balanceAccountId;
+      const encoded = encodeURIComponent(balanceAccountId);
+      const [data, cardsPayload] = await Promise.all([
+        trackedFetch(`/api/adyen/account-overview?balanceAccountId=${encoded}`),
+        trackedFetch(`/api/adyen/cards?balanceAccountId=${encoded}`).catch(() => null),
+      ]);
       setOverview(data);
+      if (Array.isArray(cardsPayload?.paymentInstruments)) {
+        setCardsIssued(cardsPayload.paymentInstruments.length);
+      }
       setError("");
       hasLoadedOnceRef.current = true;
     } catch (err) {
@@ -68,14 +75,20 @@ export default function HomePage() {
       items.find((item) => (item?.currency || item?.available?.currency || item?.balance?.currency) === "USD") ||
       items[0];
 
-    // Adyen may return scalar minor units (available: 200000) or nested objects ({ available: { value, currency } }).
+    // Adyen may return scalar minor units or nested objects ({ value, currency }).
+    const balanceRaw = usd?.balance;
+    const availableRaw = usd?.available;
+    const balanceValue =
+      typeof balanceRaw === "number" ? balanceRaw : Number(balanceRaw?.value ?? 0);
     const availableValue =
-      typeof usd?.available === "number" ? usd.available : Number(usd?.available?.value || usd?.balance?.value || 0);
+      typeof availableRaw === "number" ? availableRaw : Number(availableRaw?.value ?? 0);
     const pendingValue =
       typeof usd?.pending === "number" ? usd.pending : Number(usd?.pending?.value || usd?.reserved?.value || 0);
-    const currencyCode = usd?.currency || usd?.available?.currency || usd?.balance?.currency || "USD";
+    const currencyCode =
+      usd?.currency || usd?.available?.currency || usd?.balance?.currency || "USD";
 
     return {
+      balance: Number.isFinite(balanceValue) ? balanceValue : 0,
       available: Number.isFinite(availableValue) ? availableValue : 0,
       pending: Number.isFinite(pendingValue) ? pendingValue : 0,
       currency: currencyCode,
@@ -86,8 +99,8 @@ export default function HomePage() {
     <div className="space-y-6">
       <PageHeader title="Account" subtitle="Review your balance account and transactions" />
 
-      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="ca-panel">
+      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:items-stretch">
+        <div className="h-full min-h-0 w-full">
           {loading && !hasLoadedOnceRef.current ? (
             <div className="space-y-3">
               <LoadingSkeleton className="h-8 w-64" />
@@ -98,32 +111,21 @@ export default function HomePage() {
               <p>{error}</p>
             </div>
           ) : (
-            <div className="grid gap-3">
-              <div className="rounded-xl border border-[#E4E9F2] bg-[#FBFCFE] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#70819D]">Balance Account</p>
-                <p className="mt-2 text-3xl font-semibold tracking-[-0.01em] text-[#0B1222]">
-                  {formatCurrency(balances.available, balances.currency)}
-                </p>
-                <p className="mt-1 text-xs text-[#5C6B84]">{balances.currency}</p>
-              </div>
-              <div className="rounded-xl border border-[#E4E9F2] bg-[#FBFCFE] p-4 text-sm text-[#445573]">
-                <p className="break-all">
-                  <span className="font-semibold text-[#1D2E4B]">Account Holder:</span> {user.accountHolderId || "—"}
-                </p>
-                <p className="mt-1 break-all">
-                  <span className="font-semibold text-[#1D2E4B]">Legal Entity:</span> {user.legalEntityId || "—"}
-                </p>
-                <p className="mt-1 break-all">
-                  <span className="font-semibold text-[#1D2E4B]">Balance Account:</span> {user.balanceAccountId || "—"}
-                </p>
-              </div>
-            </div>
+            <BalanceAccountCard
+              balanceMinorUnits={balances.balance}
+              availableMinorUnits={balances.available}
+              pendingMinorUnits={balances.pending}
+              currency={balances.currency}
+              cardsIssued={cardsIssued}
+              balanceAccountId={user.balanceAccountId}
+              accountHolderId={user.accountHolderId}
+              legalEntityId={user.legalEntityId}
+            />
           )}
         </div>
 
-        <div className="ca-panel">
+        <div className="ca-panel h-full">
           <MainAccountTransfer onTransferComplete={loadOverview} onSuccess={showSuccess} onError={showError} />
-          <p className="mt-3 text-xs text-[#5C6B84]">Balance refreshes automatically every 10 seconds.</p>
         </div>
       </section>
 

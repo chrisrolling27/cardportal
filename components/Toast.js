@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const TOAST_DISMISS_MS = 5000;
 
+function normalizeToastMessage(message) {
+  return String(message).trim();
+}
+
 export function useToast() {
   const [toast, setToast] = useState(null);
   const dismissTimerRef = useRef(null);
@@ -19,8 +23,10 @@ export function useToast() {
   const showToast = useCallback(
     (type, message) => {
       if (!message) return;
+      const normalizedMessage = normalizeToastMessage(message);
+      if (!normalizedMessage) return;
       clearToast();
-      setToast({ type, message });
+      setToast({ type, message: normalizedMessage });
       dismissTimerRef.current = setTimeout(() => {
         dismissTimerRef.current = null;
         setToast(null);
@@ -54,22 +60,17 @@ export function useToast() {
   };
 }
 
-export default function Toast({ toast, onClose }) {
+export default function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div
-      className={`fixed bottom-5 right-5 z-50 rounded-lg border px-4 py-3 text-sm shadow-lg ${
+      className={`fixed bottom-5 right-5 z-50 min-w-[320px] max-w-[460px] rounded-xl border px-5 py-4 text-base shadow-lg ${
         toast.type === "error"
           ? "border-[#F4CACA] bg-[#FDECEC] text-[#A43232]"
           : "border-[#BFECD0] bg-[#E8F9EF] text-[#046E31]"
       }`}
     >
-      <div className="flex items-center gap-3">
-        <p>{toast.message}</p>
-        <button type="button" onClick={onClose} className="opacity-80 hover:opacity-100">
-          ✕
-        </button>
-      </div>
+      <p className="font-medium leading-snug">{toast.message}</p>
     </div>
   );
 }

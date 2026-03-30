@@ -41,6 +41,10 @@ function formatCardReference(value) {
   return normalized.slice(0, 20);
 }
 
+function formatPaymentInstrumentId(value) {
+  return String(value || "").trim();
+}
+
 function BrandMark({ brand }) {
   if (isVisaBrand(brand)) {
     return <p className="text-sm font-bold italic tracking-[0.08em] text-white">VISA</p>;
@@ -73,6 +77,7 @@ export default function CardWalletViewer({
   const [slideDirection, setSlideDirection] = useState("next");
   const [revealedCardIds, setRevealedCardIds] = useState({});
   const touchStartXRef = useRef(null);
+  const previousWalletCardIdsRef = useRef([]);
 
   useEffect(() => {
     if (!walletCards.length) {
@@ -83,6 +88,23 @@ export default function CardWalletViewer({
       setActiveIndex(walletCards.length - 1);
     }
   }, [activeIndex, walletCards.length]);
+
+  useEffect(() => {
+    const previousIds = previousWalletCardIdsRef.current;
+    const currentIds = walletCards.map((card) => card?.id).filter(Boolean);
+    previousWalletCardIdsRef.current = currentIds;
+
+    // When a new card appears in the first 4 payment instruments, focus it.
+    if (!previousIds.length || currentIds.length <= previousIds.length) {
+      return;
+    }
+    const newlyAddedCardId = currentIds.find((id) => !previousIds.includes(id));
+    if (!newlyAddedCardId) return;
+    const nextIndex = walletCards.findIndex((card) => card?.id === newlyAddedCardId);
+    if (nextIndex < 0) return;
+    setSlideDirection(nextIndex >= activeIndex ? "next" : "prev");
+    setActiveIndex(nextIndex);
+  }, [activeIndex, walletCards]);
 
   useEffect(() => {
     const cardIds = new Set(walletCards.map((card) => card?.id).filter(Boolean));
@@ -109,7 +131,8 @@ export default function CardWalletViewer({
 
   const expiry = isRevealed ? formatExpiry(cachedReveal?.expiration) || "—" : "••/••";
   const cvc = isRevealed ? cachedReveal?.cvc || "—" : "•••";
-  const cardReference = formatCardReference(activeCard?.reference || activeCard?.description || activeCard?.id);
+  const cardReference = formatCardReference(activeCard?.reference);
+  const paymentInstrumentId = formatPaymentInstrumentId(activeCard?.id);
 
   const goNext = () => {
     if (!canRotate) return;
@@ -270,6 +293,9 @@ export default function CardWalletViewer({
                       </div>
                     </div>
                     <p className="mt-8 font-mono text-[22px] tracking-[0.16em]">{cardNumber}</p>
+                    <p className="mt-3 text-center text-[10px] uppercase tracking-[0.08em] leading-tight text-white/85">
+                      {cardReference}
+                    </p>
                     <div className="mt-7 flex items-end justify-between gap-4">
                       <div>
                         <p className="text-[11px] uppercase tracking-[0.12em] text-white/75">Expiry</p>
@@ -281,7 +307,7 @@ export default function CardWalletViewer({
                       </div>
                     </div>
                     <p className="absolute bottom-4 right-5 max-w-[76%] text-right text-[10px] uppercase tracking-[0.08em] leading-tight text-white/85">
-                      {cardReference}
+                      {paymentInstrumentId}
                     </p>
                   </div>
                 </div>

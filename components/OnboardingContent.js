@@ -276,11 +276,12 @@ export default function OnboardingContent() {
             <h2 className="mt-3 text-2xl font-semibold text-[#1E3058]">
               {allCapabilitiesSatisfied ? "Hosted Onboarding Complete" : "Complete Hosted Onboarding"}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm text-[#4E6187]">
-              {allCapabilitiesSatisfied
-                ? "Your required capabilities are already enabled. You can still reopen Adyen's hosted flow to review or update onboarding details."
-                : "Open Adyen's hosted flow to submit verification details, add transfer instruments, and accept terms so your account can move toward fully enabled capabilities."}
-            </p>
+            {!allCapabilitiesSatisfied ? (
+              <p className="mt-2 max-w-2xl text-sm text-[#4E6187]">
+                Open Adyen's hosted flow to submit verification details, add transfer instruments, and accept terms so
+                your account can move toward fully enabled capabilities.
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
