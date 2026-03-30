@@ -453,7 +453,7 @@ export async function POST(request) {
       shopperReference: 'demo-shopper',
       channel: 'Web',
       additionalData: {
-        customRoutingFlag: 'adyenIssuedCard'
+        customRoutingFlag: 'adyenIssuedTestCard'
       }
     });
 
@@ -467,7 +467,7 @@ export async function POST(request) {
 }
 ```
 
-This uses `ADYEN_PAYMENTS_API_KEY` via the `adyenCheckoutRequest` helper. The Checkout `/v71/sessions` endpoint is different from the Session Authentication API used by Platform Experience components. The `additionalData.customRoutingFlag: "adyenIssuedCard"` tells Adyen to route this payment through the issuing network — this is required when the card being charged was issued by Adyen (i.e., the cards created in the Cards tab).
+This uses `ADYEN_PAYMENTS_API_KEY` via the `adyenCheckoutRequest` helper. The Checkout `/v71/sessions` endpoint is different from the Session Authentication API used by Platform Experience components. The `additionalData.customRoutingFlag: "adyenIssuedTestCard"` tells Adyen to route this payment through the issuing network — this is required when the card being charged was issued by Adyen (i.e., the cards created in the Cards tab).
 
 ### Client-Side: Mount Drop-in (v6 syntax)
 

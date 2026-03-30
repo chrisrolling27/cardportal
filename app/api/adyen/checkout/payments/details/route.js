@@ -1,5 +1,14 @@
 import { adyenCheckoutRequest } from "@/lib/adyen";
 
+function toClientSafePaymentResponse(payload) {
+  if (!payload || typeof payload !== "object") return {};
+  return {
+    action: payload.action,
+    order: payload.order,
+    resultCode: payload.resultCode,
+  };
+}
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -11,10 +20,10 @@ export async function POST(request) {
     }
 
     const data = await adyenCheckoutRequest("/payments/details", "POST", body);
-    return Response.json(data);
+    return Response.json(toClientSafePaymentResponse(data));
   } catch (error) {
     return Response.json(
-      { error: error.message || "Payment details call failed", details: error.response || null },
+      { error: error.message || "Payment details call failed" },
       { status: error.status || 500 }
     );
   }

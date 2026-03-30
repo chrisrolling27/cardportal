@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AdyenComponentMount from "@/components/AdyenComponentMount";
-import Toast from "@/components/Toast";
+import PageHeader from "@/components/PageHeader";
+import Toast, { useToast } from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -13,7 +14,7 @@ export default function PayoutsPage() {
   const [isLoadingSweep, setIsLoadingSweep] = useState(true);
   const [isSubmittingSweep, setIsSubmittingSweep] = useState(false);
   const [isDeletingSweep, setIsDeletingSweep] = useState(false);
-  const [toast, setToast] = useState(null);
+  const { toast, clearToast, showError, showSuccess } = useToast();
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     scheduleType: "daily",
@@ -43,9 +44,7 @@ export default function PayoutsPage() {
     return `${value.charAt(0).toUpperCase()}${value.slice(1).toLowerCase()}`;
   })();
   const targetAmountLabel =
-    typeof sweepAmount?.value === "number"
-      ? `${(sweepAmount.value / 100).toFixed(2)} ${sweepAmount.currency || ""}`.trim()
-      : "—";
+    typeof sweepAmount?.value === "number" ? `$${(sweepAmount.value / 100).toFixed(2)}` : "—";
 
   const loadSweep = async () => {
     if (!user?.balanceAccountId) {
@@ -63,8 +62,9 @@ export default function PayoutsPage() {
       const data = await trackedFetch(`/api/adyen/sweeps?${query.toString()}`);
       setSweep(data?.sweep || null);
     } catch (err) {
-      setError(err.message || "Failed to load sweeps.");
-      setToast({ type: "error", message: err.message || "Failed to load sweeps." });
+      const message = err.message || "Failed to load sweeps.";
+      setError(message);
+      showError(message);
     } finally {
       setIsLoadingSweep(false);
     }
@@ -99,28 +99,28 @@ export default function PayoutsPage() {
     if (!Number.isFinite(amount) || amount < 1 || amount > 999) {
       const message = "Amount must be between 1 and 999.";
       setError(message);
-      setToast({ type: "error", message });
+      showError(message);
       return;
     }
 
     if (!hasSweep && !canCreateSweep) {
       const message = "Unable to create sweep: missing a balance account or eligible transfer instrument.";
       setError(message);
-      setToast({ type: "error", message });
+      showError(message);
       return;
     }
 
     if (hasSweep && !sweepId) {
       const message = "Unable to update sweep: sweep ID is missing.";
       setError(message);
-      setToast({ type: "error", message });
+      showError(message);
       return;
     }
 
     try {
       setIsSubmittingSweep(true);
       setError("");
-      await trackedFetch("/api/adyen/sweeps", {
+      const response = await trackedFetch("/api/adyen/sweeps", {
         method: hasSweep ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,12 +132,13 @@ export default function PayoutsPage() {
           amount,
         }),
       });
-      setToast({ type: "success", message: hasSweep ? "Sweep updated." : "Sweep created." });
+
+      showSuccess(hasSweep ? "Sweep updated" : "Sweep created");
       await loadSweep();
     } catch (err) {
       const message = err.message || (hasSweep ? "Failed to update sweep." : "Failed to create sweep.");
       setError(message);
-      setToast({ type: "error", message });
+      showError(message);
     } finally {
       setIsSubmittingSweep(false);
     }
@@ -147,7 +148,7 @@ export default function PayoutsPage() {
     if (!sweepId || !user?.balanceAccountId) {
       const message = "Unable to delete sweep: missing sweep or balance account ID.";
       setError(message);
-      setToast({ type: "error", message });
+      showError(message);
       return;
     }
 
@@ -161,12 +162,12 @@ export default function PayoutsPage() {
       await trackedFetch(`/api/adyen/sweeps?${query.toString()}`, {
         method: "DELETE",
       });
-      setToast({ type: "success", message: "Sweep deleted." });
+      showSuccess("Sweep deleted.");
       await loadSweep();
     } catch (err) {
       const message = err.message || "Failed to delete sweep.";
       setError(message);
-      setToast({ type: "error", message });
+      showError(message);
     } finally {
       setIsDeletingSweep(false);
     }
@@ -174,13 +175,7 @@ export default function PayoutsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="ca-panel">
-        <h1 className="ca-title">Sweeps</h1>
-        <p className="ca-muted mt-2">
-          Configure a sweep to transfer instrument when your account holder has the required capability and eligible
-          transfer instrument.
-        </p>
-      </section>
+      <PageHeader title="Sweeps" subtitle="Configure a scheduled transfer of funds to your Transfer Instrument" />
 
       <section className="ca-panel">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -228,6 +223,8 @@ export default function PayoutsPage() {
                   <p className="mt-1 text-xl font-semibold text-blue-700">{frequencyLabel}</p>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <dt className="ca-muted">Sweep ID</dt>
+                  <dd className="truncate text-right font-semibold text-[#00112C]">{sweepId || "—"}</dd>
                   <dt className="ca-muted">Balance Account</dt>
                   <dd className="truncate text-right font-medium text-[#00112C]">{user?.balanceAccountId || "—"}</dd>
                   <dt className="ca-muted">Transfer Instrument</dt>
@@ -269,15 +266,21 @@ export default function PayoutsPage() {
                 <option value="monthly">Monthly</option>
               </select>
 
-              <label className="text-xs font-medium text-[#3B4556]">Amount (whole dollars, 1-999)</label>
+              <label className="text-xs font-medium text-[#3B4556]">Amount ($1 - $999)</label>
               <input
                 type="number"
                 min={1}
                 max={999}
                 value={form.amount}
-                onChange={(e) => setForm((s) => ({ ...s, amount: Number(e.target.value) }))}
+                onChange={(e) => {
+                  const nextValue = Number(e.target.value);
+                  const boundedAmount = Number.isFinite(nextValue)
+                    ? Math.max(1, Math.min(999, Math.round(nextValue)))
+                    : 1;
+                  setForm((s) => ({ ...s, amount: boundedAmount }));
+                }}
                 className="ca-input"
-                placeholder="100"
+                placeholder="$100"
                 disabled={isFormDisabled}
               />
             </div>
@@ -315,7 +318,7 @@ export default function PayoutsPage() {
         />
       </section>
 
-      <Toast toast={toast} onClose={() => setToast(null)} />
+      <Toast toast={toast} onClose={clearToast} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import LoadingSkeleton from "@/components/LoadingSkeleton";
 export default function AdyenComponentMount({
   componentName,
   accountHolderId,
+  balanceAccountId,
   roles,
   fallback,
   className = "ca-panel-tight",
@@ -49,7 +50,7 @@ export default function AdyenComponentMount({
         const Component = map[componentName];
         if (!Component) throw new Error(`Unknown component: ${componentName}`);
 
-        const sessionKey = `${accountHolderId}:${rolesKey}`;
+        const sessionKey = `${accountHolderId}:${balanceAccountId || ""}:${rolesKey}`;
         const getSession = async () => {
           const now = Date.now();
           const cached = sessionCacheRef.current;
@@ -98,7 +99,11 @@ export default function AdyenComponentMount({
         };
 
         const core = await sdk.AdyenPlatformExperience({ onSessionCreate: getSession });
-        componentInstance = new Component({ core });
+        const componentProps =
+          componentName === "ReportsOverview" && balanceAccountId
+            ? { core, balanceAccountId }
+            : { core };
+        componentInstance = new Component(componentProps);
 
         if (mounted && containerRef.current) {
           componentInstance.mount(containerRef.current);
@@ -116,7 +121,7 @@ export default function AdyenComponentMount({
       mounted = false;
       componentInstance?.unmount?.();
     };
-  }, [accountHolderId, componentName, rolesKey]);
+  }, [accountHolderId, balanceAccountId, componentName, rolesKey]);
 
   if (error) return fallback || <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>;
 

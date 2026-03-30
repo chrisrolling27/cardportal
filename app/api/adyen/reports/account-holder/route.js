@@ -26,6 +26,7 @@ function diagnosticsFor(error, reportsAccountHolderId) {
 export async function GET() {
   try {
     const reportsAccountHolderId = String(process.env.REPORTS_ACCOUNTHOLDER_ID || "").trim();
+    const reportsBalanceAccountId = String(process.env.REPORTS_BALANCE_ACCOUNT_ID || "").trim();
     if (!reportsAccountHolderId) {
       return Response.json(
         {
@@ -38,12 +39,27 @@ export async function GET() {
         { status: 500 }
       );
     }
+    if (!reportsBalanceAccountId) {
+      return Response.json(
+        {
+          error: "REPORTS_BALANCE_ACCOUNT_ID is not configured.",
+          diagnostics: {
+            hint: "Set REPORTS_BALANCE_ACCOUNT_ID in .env to a valid balance account ID.",
+            probableCause: "missing_reports_balance_account_id",
+          },
+        },
+        { status: 500 }
+      );
+    }
 
     const data = await adyenPlatformRequest(
       `/accountHolders/${encodeURIComponent(reportsAccountHolderId)}`,
       "GET"
     );
-    return Response.json(data);
+    return Response.json({
+      ...data,
+      reportsBalanceAccountId,
+    });
   } catch (error) {
     return Response.json(
       {

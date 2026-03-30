@@ -2,27 +2,129 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApiHistory } from "@/context/ApiHistoryContext";
+import { useAuth } from "@/context/AuthContext";
+import CardWalletViewer from "@/components/CardWalletViewer";
+import PageHeader from "@/components/PageHeader";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { formatCurrency, formatTime, generateOrderReference } from "@/lib/utils";
 
-const ORDER_ITEMS = [
-  "Premium Widget",
-  "Flux Capacitor Upgrade",
-  "Cloud Storage (1TB)",
-  "Artisanal Coffee Subscription",
-  "Quantum Computing Credits",
-  "AI Training Token Pack",
-  "Holographic Display Module",
-  "Space Tourism Voucher",
+const TOURIST_CITIES = [
+  "Paris",
+  "Tokyo",
+  "Rome",
+  "New York",
+  "London",
+  "Barcelona",
+  "Dubai",
+  "Singapore",
+  "Sydney",
+  "Istanbul",
 ];
+const UPSCALE_HOTELS = [
+  "The Grand Regent",
+  "Palais Royale Suites",
+  "Azure Crown Hotel",
+  "Imperial Orchid Residence",
+  "The Starlight Conservatory",
+  "Velvet Bay Manor",
+  "Sapphire Atrium",
+  "The Windsor Meridian",
+];
+const ADVENTURE_ITEMS = [
+  "Canyon Zipline Expedition",
+  "Glacier Helicopter Trek",
+  "Volcano Sunset Hike",
+  "Desert Dune Rally",
+  "Rainforest Canopy Climb",
+  "Coastal Cliff Paraglide",
+  "Alpine Summit Traverse",
+  "Jungle River Kayak Quest",
+  "Luxury Safari Game Drive",
+  "Jungle Exploration Trek",
+  "Starlight Mountain Camping Retreat",
+  "Highland Mountain Exploration Hike",
+  "Arctic Wilderness Survival Camp",
+  "Waterfall Canyoning Expedition",
+  "Remote Island Snorkel Adventure",
+  "Ancient Forest Night Trail Experience",
+];
+const TRAVEL_EXPERIENCES = [
+  "City Museum Discovery Pass",
+  "Harbor Sunset Cruise",
+  "Private Landmark Photo Tour",
+  "Luxury Rail Day Journey",
+  "Cultural Food & Markets Walk",
+  "Historic District Night Tour",
+  "Island Lighthouse Excursion",
+  "VIP Skyline Observation Entry",
+  "Sunrise Temple & Heritage Tour",
+  "Old Town Architecture Walking Experience",
+  "World Heritage Sites Day Trip",
+  "Royal Palace & Art Collection Visit",
+];
+const WORLD_WONDERS_AND_ATTRACTIONS = [
+  "Machu Picchu Sunrise Guided Tour",
+  "Great Wall of China Scenic Trek Pass",
+  "Petra Historic Canyon Entry",
+  "Colosseum & Roman Forum VIP Access",
+  "Taj Mahal Moonlight Viewing Experience",
+  "Chichen Itza Archaeology Discovery Tour",
+  "Christ the Redeemer Summit Excursion",
+  "Pyramids of Giza Desert Heritage Visit",
+  "Acropolis of Athens Expert-Led Tour",
+  "Angkor Wat Temple Circuit Experience",
+  "Stonehenge Solstice Visitor Package",
+  "Easter Island Moai Cultural Journey",
+];
+const CUSTOM_ROUTING_FLAG = "adyenIssuedTestCard";
+const SUCCESS_RESULT_CODES = new Set(["Authorised"]);
+const PROCESSING_RESULT_CODES = new Set(["Pending", "Received"]);
 
 function randomChoice(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function createFlightItem() {
+  const departure = randomChoice(TOURIST_CITIES);
+  const destinationOptions = TOURIST_CITIES.filter((city) => city !== departure);
+  const destination = randomChoice(destinationOptions);
+  return `✈️ Flight from ${departure} to ${destination}`;
+}
+
+function createHotelItem() {
+  const hotel = randomChoice(UPSCALE_HOTELS);
+  const city = randomChoice(TOURIST_CITIES);
+  return `🏨 ${hotel} in ${city}`;
+}
+
+function createAdventureItem() {
+  return `${randomChoice(["🧗", "🦁", "🌴", "🏕️", "⛰️", "🛶", "🪂", "🌋"])} ${randomChoice(ADVENTURE_ITEMS)}`;
+}
+
+function createTravelItem() {
+  return `${randomChoice(["🧳", "🗺️", "📸", "🚢", "🎒", "🏛️", "🌅", "🚠"])} ${randomChoice(TRAVEL_EXPERIENCES)}`;
+}
+
+function createWonderItem() {
+  return `${randomChoice(["🗿", "🕌", "🏯", "🏰", "🕍", "🧭", "📜", "🌍"])} ${randomChoice(
+    WORLD_WONDERS_AND_ATTRACTIONS
+  )}`;
+}
+
+function createRandomItem() {
+  return randomChoice([
+    createFlightItem,
+    createHotelItem,
+    createAdventureItem,
+    createTravelItem,
+    createWonderItem,
+  ])();
+}
+
 function createRandomOrder() {
   return {
-    item: randomChoice(ORDER_ITEMS),
-    amountMinor: Math.floor(Math.random() * 49901) + 100,
+    item: createRandomItem(),
+    amountMinor: Math.floor(Math.random() * 45001) + 5000,
     currency: "USD",
     reference: generateOrderReference(),
   };
@@ -37,13 +139,26 @@ function toClientSafePaymentPayload(payload) {
   };
 }
 
+function resolvePaymentStatus(resultCode) {
+  if (SUCCESS_RESULT_CODES.has(resultCode)) return "success";
+  if (PROCESSING_RESULT_CODES.has(resultCode)) return "processing";
+  return "failed";
+}
+
 export default function CheckoutPage() {
   const { trackedFetch } = useApiHistory();
+  const { user } = useAuth();
   const [order, setOrder] = useState(() => createRandomOrder());
   const [loadingDropin, setLoadingDropin] = useState(true);
   const [initError, setInitError] = useState("");
   const [paymentResult, setPaymentResult] = useState(null);
   const [attempts, setAttempts] = useState([]);
+  const [cards, setCards] = useState([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [cardsError, setCardsError] = useState("");
+  const [revealByCardId, setRevealByCardId] = useState({});
+  const [revealLoadingByCardId, setRevealLoadingByCardId] = useState({});
+  const [revealErrorByCardId, setRevealErrorByCardId] = useState({});
 
   const containerRef = useRef(null);
   const dropinRef = useRef(null);
@@ -70,6 +185,38 @@ export default function CheckoutPage() {
       ...prev,
     ]);
   }, [order.amountMinor, order.currency, order.item]);
+
+  const loadCards = useCallback(async () => {
+    if (!user?.balanceAccountId) {
+      setCards([]);
+      setCardsError("");
+      setCardsLoading(false);
+      return;
+    }
+
+    setCardsLoading(true);
+    setCardsError("");
+    try {
+      const data = await trackedFetch(`/api/adyen/cards?balanceAccountId=${user.balanceAccountId}`);
+      const list = data.paymentInstruments || [];
+      setCards(list);
+      const idSet = new Set(list.map((item) => item?.id).filter(Boolean));
+      setRevealByCardId((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([cardId]) => idSet.has(cardId)))
+      );
+      setRevealLoadingByCardId((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([cardId]) => idSet.has(cardId)))
+      );
+      setRevealErrorByCardId((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([cardId]) => idSet.has(cardId)))
+      );
+    } catch (error) {
+      setCards([]);
+      setCardsError(getApiErrorMessage(error));
+    } finally {
+      setCardsLoading(false);
+    }
+  }, [trackedFetch, user?.balanceAccountId]);
 
   const clearDropin = useCallback(() => {
     if (dropinRef.current?.unmount && dropinReadyRef.current) {
@@ -153,6 +300,9 @@ export default function CheckoutPage() {
                 currency: order.currency,
                 reference: order.reference,
                 stateData: state.data,
+                additionalData: {
+                  customRoutingFlag: CUSTOM_ROUTING_FLAG,
+                },
                 origin: window.location.origin,
                 returnUrl: `${window.location.origin}/checkout`,
               }),
@@ -198,13 +348,14 @@ export default function CheckoutPage() {
           }
         },
         onPaymentCompleted: (result) => {
-          const isAuthorised = result?.resultCode === "Authorised";
+          const resultCode = result?.resultCode || "Unknown";
+          const status = resolvePaymentStatus(resultCode);
           const resolvedResult = {
-            resultCode: result?.resultCode || "Unknown",
+            resultCode,
             refusalReason: result?.refusalReason || "",
           };
           setPaymentResult({
-            status: isAuthorised ? "success" : "failed",
+            status,
             ...resolvedResult,
           });
           addAttempt(resolvedResult);
@@ -302,6 +453,39 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    loadCards();
+  }, [loadCards]);
+
+  const revealCardDetails = useCallback(
+    async (paymentInstrumentId) => {
+      if (!paymentInstrumentId) return null;
+      if (revealByCardId[paymentInstrumentId]) {
+        setRevealErrorByCardId((prev) => ({ ...prev, [paymentInstrumentId]: "" }));
+        return revealByCardId[paymentInstrumentId];
+      }
+
+      setRevealLoadingByCardId((prev) => ({ ...prev, [paymentInstrumentId]: true }));
+      setRevealErrorByCardId((prev) => ({ ...prev, [paymentInstrumentId]: "" }));
+      try {
+        const payload = await trackedFetch("/api/adyen/cards/reveal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentInstrumentId }),
+        });
+        setRevealByCardId((prev) => ({ ...prev, [paymentInstrumentId]: payload }));
+        return payload;
+      } catch (error) {
+        const message = getApiErrorMessage(error);
+        setRevealErrorByCardId((prev) => ({ ...prev, [paymentInstrumentId]: message }));
+        return null;
+      } finally {
+        setRevealLoadingByCardId((prev) => ({ ...prev, [paymentInstrumentId]: false }));
+      }
+    },
+    [revealByCardId, trackedFetch]
+  );
+
+  useEffect(() => {
     initDropin();
     return () => {
       // Invalidate any in-flight initialization before teardown.
@@ -316,27 +500,38 @@ export default function CheckoutPage() {
 
   return (
     <div className="space-y-6">
-      <section className="ca-panel">
-        <h1 className="ca-title">Checkout</h1>
-        <p className="mt-1 text-sm text-[#5C6B84]">Simulate a checkout payment with Adyen Drop-in.</p>
-      </section>
+      <PageHeader title="Checkout" subtitle="Simulate a checkout purchase with your issued card" />
 
       <section className="ca-panel">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-2">
-            <h2 className="ca-section-title">CardPortal Demo Store</h2>
-            <p className="text-sm text-[#5C6B84]">Item: {order.item}</p>
-            <p className="text-sm text-[#5C6B84]">Amount: {orderAmount}</p>
-            <p className="break-all text-xs text-[#70819D]">Reference: {order.reference}</p>
+          <div className="w-full max-w-2xl rounded-lg bg-[#F8FAFD] p-4">
+            <div className="space-y-2">
+              <p className="text-lg font-extrabold leading-tight text-[#0B1222] md:text-xl">{order.item}</p>
+              <p className="text-xl font-extrabold text-[#0B1222]">Amount: {orderAmount}</p>
+              <p className="break-all text-sm font-medium text-[#334155]">Reference: {order.reference}</p>
+            </div>
           </div>
           <button type="button" className="ca-button-dark h-10" onClick={randomizeOrder}>
-            Randomize order
+            Randomize
           </button>
         </div>
       </section>
 
+      <CardWalletViewer
+        cards={cards}
+        loading={cardsLoading}
+        error={cardsError}
+        revealByCardId={revealByCardId}
+        revealLoadingByCardId={revealLoadingByCardId}
+        revealErrorByCardId={revealErrorByCardId}
+        onRevealCardDetails={revealCardDetails}
+        onRetry={loadCards}
+        title="Card Wallet"
+        subtitle=""
+      />
+
       <section className="ca-panel">
-        <h2 className="ca-section-title">Pay with Drop-in</h2>
+        <h2 className="ca-section-title">Checkout with the Drop-in Component</h2>
         <div className="mt-4 rounded-xl border border-[#E4E9F2] bg-white p-4">
           {loadingDropin ? <p className="text-sm text-[#5C6B84]">Initializing secure payment form...</p> : null}
           {initError ? (
@@ -356,13 +551,19 @@ export default function CheckoutPage() {
           className={`ca-panel ${
             paymentResult.status === "success"
               ? "border-green-200 bg-green-50"
+              : paymentResult.status === "processing"
+                ? "border-blue-200 bg-blue-50"
               : paymentResult.status === "failed"
                 ? "border-red-200 bg-red-50"
                 : "border-amber-200 bg-amber-50"
           }`}
         >
           <h2 className="ca-section-title">
-            {paymentResult.status === "success" ? "Payment authorised" : "Payment not authorised"}
+            {paymentResult.status === "success"
+              ? "Payment authorised"
+              : paymentResult.status === "processing"
+                ? "Payment is processing"
+                : "Payment not authorised"}
           </h2>
           <p className="mt-2 text-sm text-[#334155]">Result: {paymentResult.resultCode}</p>
           {paymentResult.refusalReason ? (

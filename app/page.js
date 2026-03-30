@@ -11,7 +11,7 @@ export default function LandingPage() {
   const { user, restoring } = useAuth();
 
   useEffect(() => {
-    if (user) router.replace("/home");
+    if (user) router.replace("/account");
   }, [router, user]);
 
   if (restoring) {

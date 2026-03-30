@@ -11,7 +11,7 @@ function uniqueIds(ids) {
   return Array.from(new Set((ids || []).filter(Boolean)));
 }
 
-export default function MainAccountTransfer({ onTransferComplete, onToast }) {
+export default function MainAccountTransfer({ onTransferComplete, onSuccess, onError }) {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,17 +76,23 @@ export default function MainAccountTransfer({ onTransferComplete, onToast }) {
   const submitTransfer = async (event) => {
     event.preventDefault();
     if (!user?.balanceAccountId) {
-      setError("Missing balance account ID in session.");
+      const message = "Missing balance account ID in session.";
+      setError(message);
+      if (onError) onError(message);
       return;
     }
 
     if (!hasAmountInRange) {
-      setError("Amount must be between 0 and 999.");
+      const message = "Amount must be between 0 and 999.";
+      setError(message);
+      if (onError) onError(message);
       return;
     }
 
     if (needsTransferInstrumentId && !form.transferInstrumentId) {
-      setError("Select a transfer instrument.");
+      const message = "Select a transfer instrument.";
+      setError(message);
+      if (onError) onError(message);
       return;
     }
 
@@ -121,10 +127,11 @@ export default function MainAccountTransfer({ onTransferComplete, onToast }) {
       if (onTransferComplete) await onTransferComplete();
       setError("");
       setForm((prev) => ({ ...prev, amount: DEFAULT_AMOUNT }));
-      if (onToast) onToast({ type: "success", message: `Transfer submitted: ${amountLabel}.` });
+      if (onSuccess) onSuccess(`Transfer submitted: ${amountLabel}.`);
     } catch (err) {
-      setError(err.message || "Transfer failed.");
-      if (onToast) onToast({ type: "error", message: err.message || "Transfer failed." });
+      const message = err.message || "Transfer failed.";
+      setError(message);
+      if (onError) onError(message);
     } finally {
       setIsSubmitting(false);
     }

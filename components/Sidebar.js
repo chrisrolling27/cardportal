@@ -32,10 +32,10 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-lg border-l-4 px-3 py-2.5 text-sm transition ${
+                className={`block rounded-lg border-l-4 px-3 py-2.5 text-sm font-semibold transition ${
                   active
                     ? "border-[#0ABF53] bg-white/10 text-white"
-                    : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+                    : "border-transparent text-white hover:bg-white/5"
                 }`}
               >
                 {item.label}

@@ -73,3 +73,57 @@ body {
   --adyen-sdk-color-label-primary: #00112c;
 }
 
+@keyframes card-wallet-slide-in-next {
+  0% {
+    opacity: 0;
+    transform: translateX(42px) translateZ(-40px) scale(0.9) rotateY(-18deg) rotateZ(1deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-8px) translateZ(0) scale(1.02) rotateY(4deg) rotateZ(-0.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateZ(0) scale(1) rotateY(0deg) rotateZ(0deg);
+  }
+}
+
+@keyframes card-wallet-slide-in-prev {
+  0% {
+    opacity: 0;
+    transform: translateX(-42px) translateZ(-40px) scale(0.9) rotateY(18deg) rotateZ(-1deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(8px) translateZ(0) scale(1.02) rotateY(-4deg) rotateZ(0.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateZ(0) scale(1) rotateY(0deg) rotateZ(0deg);
+  }
+}
+
+.card-wallet-slide-in-next {
+  animation: card-wallet-slide-in-next 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.card-wallet-slide-in-prev {
+  animation: card-wallet-slide-in-prev 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+@keyframes card-wallet-shimmer {
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.card-wallet-shimmer {
+  animation: card-wallet-shimmer 1.25s linear infinite;
+}
+

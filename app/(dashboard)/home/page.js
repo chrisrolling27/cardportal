@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdyenComponentMount from "@/components/AdyenComponentMount";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import MainAccountTransfer from "@/components/MainAccountTransfer";
-import Toast from "@/components/Toast";
+import PageHeader from "@/components/PageHeader";
+import Toast, { useToast } from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatCurrency } from "@/lib/utils";
@@ -16,7 +17,7 @@ export default function HomePage() {
   const { trackedFetch } = useApiHistory();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
+  const { toast, clearToast, showSuccess, showError } = useToast();
   const [error, setError] = useState("");
   const hasLoadedOnceRef = useRef(false);
 
@@ -30,10 +31,11 @@ export default function HomePage() {
       hasLoadedOnceRef.current = true;
     } catch (err) {
       setError(err.message);
+      showError(err.message || "Failed to load account overview.");
     } finally {
       setLoading(false);
     }
-  }, [trackedFetch, user.balanceAccountId]);
+  }, [showError, trackedFetch, user.balanceAccountId]);
 
   useEffect(() => {
     loadOverview();
@@ -82,9 +84,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <section className="ca-panel-tight">
-        <h1 className="ca-title">Account</h1>
-      </section>
+      <PageHeader title="Account" subtitle="Review your balance account and transactions" />
 
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="ca-panel">
@@ -119,7 +119,7 @@ export default function HomePage() {
         </div>
 
         <div className="ca-panel">
-          <MainAccountTransfer onTransferComplete={loadOverview} onToast={setToast} />
+          <MainAccountTransfer onTransferComplete={loadOverview} onSuccess={showSuccess} onError={showError} />
           <p className="mt-3 text-xs text-[#5C6B84]">Balance refreshes automatically every 10 seconds.</p>
         </div>
       </section>
@@ -133,7 +133,7 @@ export default function HomePage() {
         />
       </section>
 
-      <Toast toast={toast} onClose={() => setToast(null)} />
+      <Toast toast={toast} onClose={clearToast} />
     </div>
   );
 }

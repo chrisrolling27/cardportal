@@ -1,5 +1,59 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const TOAST_DISMISS_MS = 5000;
+
+export function useToast() {
+  const [toast, setToast] = useState(null);
+  const dismissTimerRef = useRef(null);
+
+  const clearToast = useCallback(() => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    setToast(null);
+  }, []);
+
+  const showToast = useCallback(
+    (type, message) => {
+      if (!message) return;
+      clearToast();
+      setToast({ type, message });
+      dismissTimerRef.current = setTimeout(() => {
+        dismissTimerRef.current = null;
+        setToast(null);
+      }, TOAST_DISMISS_MS);
+    },
+    [clearToast]
+  );
+
+  const showSuccess = useCallback(
+    (message) => {
+      showToast("success", message);
+    },
+    [showToast]
+  );
+
+  const showError = useCallback(
+    (message) => {
+      showToast("error", message);
+    },
+    [showToast]
+  );
+
+  useEffect(() => () => clearToast(), [clearToast]);
+
+  return {
+    toast,
+    clearToast,
+    showToast,
+    showSuccess,
+    showError,
+  };
+}
+
 export default function Toast({ toast, onClose }) {
   if (!toast) return null;
   return (

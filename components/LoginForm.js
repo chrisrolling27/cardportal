@@ -31,7 +31,7 @@ export default function LoginForm() {
         }),
       });
       setSession(data);
-      router.push("/home");
+      router.push("/account");
     } catch (err) {
       setError(err.message || "Unable to log in.");
     } finally {
@@ -54,7 +54,7 @@ export default function LoginForm() {
         }),
       });
       setSession(data);
-      router.push("/home");
+      router.push("/account");
     } catch (err) {
       setError(err.message || "Unable to log in with KNOWN_AH.");
     } finally {

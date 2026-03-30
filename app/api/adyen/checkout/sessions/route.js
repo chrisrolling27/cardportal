@@ -16,7 +16,7 @@ export async function POST(request) {
       shopperReference: "demo-shopper",
       channel: "Web",
       additionalData: {
-        customRoutingFlag: "adyenIssuedCard",
+        customRoutingFlag: "adyenIssuedTestCard",
       },
     });
 
