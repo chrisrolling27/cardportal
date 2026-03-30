@@ -5,6 +5,7 @@ const BRAND_VARIANT_BY_BRAND = {
   mc: process.env.ADYEN_BRAND_VARIANT_MASTERCARD || "mc_credit_mco",
 };
 const HARDCODED_CARDHOLDER_NAME = "Chris Rolling";
+const MAX_PAYMENT_INSTRUMENTS = 4;
 
 export async function GET(request) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request) {
     );
     return Response.json({
       ...data,
-      paymentInstruments: cardPaymentInstruments,
+      paymentInstruments: cardPaymentInstruments.slice(0, MAX_PAYMENT_INSTRUMENTS),
     });
   } catch (error) {
     return Response.json(
@@ -35,7 +36,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { balanceAccountId, brand } = await request.json();
+    const { balanceAccountId, brand, reference } = await request.json();
     if (!balanceAccountId || !brand) {
       return Response.json(
         { error: "balanceAccountId and brand are required." },
@@ -52,8 +53,24 @@ export async function POST(request) {
       );
     }
 
-    const description = `card ${crypto.randomUUID()}`;
-    const data = await adyenPlatformRequest("/paymentInstruments", "POST", {
+    const existingPaymentInstruments = await adyenPlatformRequest(
+      `/balanceAccounts/${balanceAccountId}/paymentInstruments`,
+      "GET"
+    );
+    const existingCards = (existingPaymentInstruments?.paymentInstruments || []).filter(
+      (instrument) => (instrument?.type || "").toLowerCase() === "card"
+    );
+    if (existingCards.length >= MAX_PAYMENT_INSTRUMENTS) {
+      return Response.json(
+        { error: `You can only create up to ${MAX_PAYMENT_INSTRUMENTS} payment instruments.` },
+        { status: 400 }
+      );
+    }
+
+    const normalizedReference = String(reference || "").trim().slice(0, 20);
+    const nextCardNumber = existingCards.length + 1;
+    const description = `card_${nextCardNumber}`;
+    const payload = {
       type: "card",
       balanceAccountId,
       card: {
@@ -64,7 +81,12 @@ export async function POST(request) {
       },
       issuingCountryCode: "US",
       description,
-    });
+    };
+    if (normalizedReference) {
+      payload.reference = normalizedReference;
+    }
+
+    const data = await adyenPlatformRequest("/paymentInstruments", "POST", payload);
 
     return Response.json(data);
   } catch (error) {

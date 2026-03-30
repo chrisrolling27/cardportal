@@ -1,17 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import CardWalletViewer from "@/components/CardWalletViewer";
 import Toast, { useToast } from "@/components/Toast";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 import { getApiErrorMessage } from "@/lib/apiError";
 
+const MAX_PAYMENT_INSTRUMENTS = 4;
+const DEFAULT_BA_REFERENCE = "BA3296P22322BJ5P5CRKCB8R6";
+const CARD_BRANDS = [
+  {
+    value: "visa",
+    label: "Visa",
+    accent: "from-[#1A1F71] via-[#1434CB] to-[#F7B600]",
+    selectedBorder: "border-[#1434CB]",
+    selectedBackground: "bg-gradient-to-r from-[#EEF3FF] to-[#FFF8E4]",
+    selectedShadow: "shadow-[0_8px_20px_rgba(20,52,203,0.2)]",
+    slotFill: "bg-gradient-to-r from-[#1A1F71] via-[#1434CB] to-[#F7B600]",
+  },
+  {
+    value: "mc",
+    label: "Mastercard",
+    accent: "from-[#EB001B] via-[#FF5F00] to-[#F79E1B]",
+    selectedBorder: "border-[#EB001B]",
+    selectedBackground: "bg-gradient-to-r from-[#FFF0EC] via-[#FFF3EA] to-[#FFF7E8]",
+    selectedShadow: "shadow-[0_8px_20px_rgba(235,0,27,0.18)]",
+    slotFill: "bg-gradient-to-r from-[#EB001B] via-[#FF5F00] to-[#F79E1B]",
+  },
+];
+
+function resolveBrandValue(card) {
+  const rawBrand = String(card?.card?.brand || card?.brand || "").toLowerCase();
+  if (rawBrand.includes("visa")) return "visa";
+  if (rawBrand.includes("mc") || rawBrand.includes("master")) return "mc";
+  return "";
+}
+
 export default function CardsContent() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
   const { toast, clearToast, showError, showSuccess } = useToast();
   const [brand, setBrand] = useState("visa");
+  const [reference, setReference] = useState("");
   const [cards, setCards] = useState([]);
   const [cardsLoading, setCardsLoading] = useState(true);
   const [cardsError, setCardsError] = useState("");
@@ -19,6 +50,13 @@ export default function CardsContent() {
   const [revealByCardId, setRevealByCardId] = useState({});
   const [revealLoadingByCardId, setRevealLoadingByCardId] = useState({});
   const [revealErrorByCardId, setRevealErrorByCardId] = useState({});
+  const cardsCount = cards.length;
+  const availableSlots = Math.max(MAX_PAYMENT_INSTRUMENTS - cardsCount, 0);
+  const canCreateMoreCards = availableSlots > 0;
+  const selectedBrandConfig = useMemo(
+    () => CARD_BRANDS.find((item) => item.value === brand) || CARD_BRANDS[0],
+    [brand]
+  );
 
   const loadCards = useCallback(async () => {
     if (!user?.balanceAccountId) {
@@ -103,9 +141,11 @@ export default function CardsContent() {
         body: JSON.stringify({
           balanceAccountId: user.balanceAccountId,
           brand,
+          reference: reference.trim(),
         }),
       });
       showSuccess("Card created!");
+      setReference("");
       await loadCards();
     } catch (error) {
       const message = getApiErrorMessage(error) || "Failed to create card.";
@@ -120,21 +160,88 @@ export default function CardsContent() {
     <div className="space-y-6">
       <section className="ca-panel">
         <h2 className="ca-section-title">Issue card</h2>
-        <form onSubmit={createCard} className="mt-4 grid gap-3 md:max-w-md">
-          <label className="text-xs font-medium text-[#3B4556]">Brand</label>
-          <select
-            value={brand}
-            onChange={(event) => setBrand(event.target.value)}
-            className="ca-input"
+        <p className="mt-1 text-sm text-[#5C6B84]">
+          Create up to {MAX_PAYMENT_INSTRUMENTS} payment instruments to spend funds in your balance account{" "}
+          {user?.balanceAccountId || DEFAULT_BA_REFERENCE}
+        </p>
+        <form onSubmit={createCard} className="mt-4 space-y-4">
+          <div
+            className={`rounded-2xl bg-gradient-to-r p-[1px] ${
+              canCreateMoreCards ? selectedBrandConfig.accent : "from-[#C7CEDB] to-[#A8B3C7]"
+            }`}
+          >
+            <div className="rounded-2xl bg-white p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]">Network</p>
+                <p className="text-xs font-semibold text-[#334155]">
+                  {cardsCount}/{MAX_PAYMENT_INSTRUMENTS} issued
+                </p>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {CARD_BRANDS.map((option) => {
+                  const isSelected = brand === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBrand(option.value)}
+                      disabled={isCreating}
+                      className={`rounded-xl border p-3 text-left transition ${
+                        isSelected
+                          ? `${option.selectedBorder} ${option.selectedBackground} ${option.selectedShadow}`
+                          : "border-[#E2E8F0] bg-[#F8FAFD] hover:border-[#B8C4D9]"
+                      } ${isCreating ? "cursor-not-allowed opacity-70" : ""}`}
+                    >
+                      <p className="text-sm font-semibold text-[#0B1222]">{option.label}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: MAX_PAYMENT_INSTRUMENTS }).map((_, index) => {
+              const slotCard = cards[index];
+              const isFilled = Boolean(slotCard);
+              const slotBrand = resolveBrandValue(slotCard);
+              const slotBrandConfig = CARD_BRANDS.find((item) => item.value === slotBrand);
+              return (
+                <div
+                  key={`slot-${index}`}
+                  className={`h-2 rounded-full ${
+                    isFilled ? slotBrandConfig?.slotFill || selectedBrandConfig.slotFill : "bg-[#E2E8F0]"
+                  }`}
+                  aria-hidden="true"
+                />
+              );
+            })}
+          </div>
+
+          <div className="grid gap-2 md:max-w-md">
+            <label htmlFor="card-reference" className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]">
+              Reference
+            </label>
+            <input
+              id="card-reference"
+              type="text"
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+              className="ca-input"
+              disabled={isCreating}
+              maxLength={20}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="ca-button-dark h-10 w-full md:max-w-md"
             disabled={isCreating}
           >
-            <option value="visa">Visa</option>
-            <option value="mc">Mastercard</option>
-          </select>
-
-          <button type="submit" className="ca-button-dark h-10 w-full" disabled={isCreating}>
-            {isCreating ? "Creating..." : "Issue card"}
+            {isCreating ? "Creating..." : "Issue payment instrument"}
           </button>
+          {!canCreateMoreCards ? <p className="text-sm text-[#5C6B84]">Limit reached on this account (4/4).</p> : null}
         </form>
       </section>
 

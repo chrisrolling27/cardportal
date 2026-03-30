@@ -35,6 +35,12 @@ function formatExpiry(expiration) {
   return `${month}/${year}`;
 }
 
+function formatCardReference(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  return normalized.slice(0, 20);
+}
+
 function BrandMark({ brand }) {
   if (isVisaBrand(brand)) {
     return <p className="text-sm font-bold italic tracking-[0.08em] text-white">VISA</p>;
@@ -103,6 +109,7 @@ export default function CardWalletViewer({
 
   const expiry = isRevealed ? formatExpiry(cachedReveal?.expiration) || "—" : "••/••";
   const cvc = isRevealed ? cachedReveal?.cvc || "—" : "•••";
+  const cardReference = formatCardReference(activeCard?.reference || activeCard?.description || activeCard?.id);
 
   const goNext = () => {
     if (!canRotate) return;
@@ -273,8 +280,8 @@ export default function CardWalletViewer({
                         <p className="text-sm font-semibold">{cvc}</p>
                       </div>
                     </div>
-                    <p className="absolute bottom-4 right-5 max-w-[76%] text-right text-[10px] leading-tight text-white/85">
-                      {activeCard?.id || ""}
+                    <p className="absolute bottom-4 right-5 max-w-[76%] text-right text-[10px] uppercase tracking-[0.08em] leading-tight text-white/85">
+                      {cardReference}
                     </p>
                   </div>
                 </div>

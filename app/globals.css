@@ -73,6 +73,12 @@ body {
   --adyen-sdk-color-label-primary: #00112c;
 }
 
+/* Hide Adyen's default helper copy above card fields. */
+#dropin-container .adyen-checkout-form-instruction,
+#dropin-container .adyen-checkout__form-instruction {
+  display: none;
+}
+
 @keyframes card-wallet-slide-in-next {
   0% {
     opacity: 0;

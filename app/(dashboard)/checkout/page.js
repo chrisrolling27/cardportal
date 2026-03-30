@@ -7,7 +7,7 @@ import CardWalletViewer from "@/components/CardWalletViewer";
 import PageHeader from "@/components/PageHeader";
 import Toast, { useToast } from "@/components/Toast";
 import { getApiErrorMessage } from "@/lib/apiError";
-import { formatCurrency, formatTime, generateOrderReference } from "@/lib/utils";
+import { formatCurrency, generateOrderReference } from "@/lib/utils";
 
 const TOURIST_CITIES = [
   "Paris",
@@ -169,7 +169,6 @@ export default function CheckoutPage() {
   const [loadingDropin, setLoadingDropin] = useState(true);
   const [initError, setInitError] = useState("");
   const [paymentResult, setPaymentResult] = useState(null);
-  const [attempts, setAttempts] = useState([]);
   const [cards, setCards] = useState([]);
   const [cardsLoading, setCardsLoading] = useState(true);
   const [cardsError, setCardsError] = useState("");
@@ -187,21 +186,6 @@ export default function CheckoutPage() {
     () => formatCurrency(order.amountMinor, order.currency),
     [order.amountMinor, order.currency]
   );
-
-  const addAttempt = useCallback((result) => {
-    setAttempts((prev) => [
-      {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        createdAt: new Date().toISOString(),
-        item: order.item,
-        amountMinor: order.amountMinor,
-        currency: order.currency,
-        resultCode: result?.resultCode || "Error",
-        refusalReason: result?.refusalReason || "",
-      },
-      ...prev,
-    ]);
-  }, [order.amountMinor, order.currency, order.item]);
 
   const resolveFailureReason = useCallback(
     async ({ result, error, context }) => {
@@ -381,7 +365,6 @@ export default function CheckoutPage() {
               resultCode: failure.resultCode,
               refusalReason: failure.userMessage,
             });
-            addAttempt({ resultCode: failure.resultCode, refusalReason: failure.userMessage });
             showError(`Payment failed: ${failure.userMessage}`);
             console.error("Checkout payment failed", {
               userMessage: failure.userMessage,
@@ -408,7 +391,6 @@ export default function CheckoutPage() {
               resultCode: failure.resultCode,
               refusalReason: failure.userMessage,
             });
-            addAttempt({ resultCode: failure.resultCode, refusalReason: failure.userMessage });
             showError(`Payment failed: ${failure.userMessage}`);
             console.error("Checkout payment details failed", {
               userMessage: failure.userMessage,
@@ -429,7 +411,6 @@ export default function CheckoutPage() {
             status,
             ...resolvedResult,
           });
-          addAttempt(resolvedResult);
           if (status === "success") {
             showSuccess(`Payment successful: ${formatCurrency(order.amountMinor, order.currency)}.`);
             return;
@@ -458,7 +439,6 @@ export default function CheckoutPage() {
             status: "failed",
             ...resolvedResult,
           });
-          addAttempt(resolvedResult);
           showError(`Payment failed: ${failure.userMessage}`);
           console.error("Checkout payment failed", {
             userMessage: failure.userMessage,
@@ -473,7 +453,6 @@ export default function CheckoutPage() {
             resultCode: "Error",
             refusalReason: message,
           });
-          addAttempt({ resultCode: "Error", refusalReason: message });
           showError(`Payment error: ${message}`);
           console.error("Checkout drop-in error", {
             context: "onError",
@@ -498,6 +477,7 @@ export default function CheckoutPage() {
           card: {
             hasHolderName: true,
             holderNameRequired: true,
+            showFormInstruction: false,
             onConfigSuccess: () => {
               // Secured fields are fully configured only after this callback.
               dropinReadyRef.current = true;
@@ -519,7 +499,6 @@ export default function CheckoutPage() {
       setLoadingDropin(false);
     }
   }, [
-    addAttempt,
     clearDropin,
     order.amountMinor,
     order.currency,
@@ -659,70 +638,6 @@ export default function CheckoutPage() {
           ) : null}
           <div id="dropin-container" ref={containerRef} className={loadingDropin || initError ? "hidden" : ""} />
         </div>
-      </section>
-
-      {paymentResult ? (
-        <section
-          className={`ca-panel ${
-            paymentResult.status === "success"
-              ? "border-green-200 bg-green-50"
-              : paymentResult.status === "processing"
-                ? "border-blue-200 bg-blue-50"
-              : paymentResult.status === "failed"
-                ? "border-red-200 bg-red-50"
-                : "border-amber-200 bg-amber-50"
-          }`}
-        >
-          <h2 className="ca-section-title">
-            {paymentResult.status === "success"
-              ? "Payment authorised"
-              : paymentResult.status === "processing"
-                ? "Payment is processing"
-                : "Payment not authorised"}
-          </h2>
-          <p className="mt-2 text-sm text-[#334155]">Result: {paymentResult.resultCode}</p>
-          {paymentResult.refusalReason ? (
-            <p className="mt-1 text-sm text-[#334155]">Detail: {paymentResult.refusalReason}</p>
-          ) : null}
-          <button type="button" className="ca-button-secondary mt-4 h-10" onClick={randomizeOrder}>
-            {paymentResult.status === "success" ? "Pay again" : "Try again"}
-          </button>
-        </section>
-      ) : null}
-
-      <section className="ca-panel">
-        <h2 className="ca-section-title">Session payment history</h2>
-        {attempts.length === 0 ? (
-          <p className="mt-3 text-sm text-[#5C6B84]">No payment attempts yet.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="ca-table">
-              <thead>
-                <tr>
-                  <th className="ca-th">Time</th>
-                  <th className="ca-th">Item</th>
-                  <th className="ca-th">Amount</th>
-                  <th className="ca-th">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attempts.map((attempt) => (
-                  <tr key={attempt.id} className="border-t border-[#E4E9F2]">
-                    <td className="ca-td">{formatTime(attempt.createdAt)}</td>
-                    <td className="ca-td">{attempt.item}</td>
-                    <td className="ca-td">{formatCurrency(attempt.amountMinor, attempt.currency)}</td>
-                    <td className="ca-td">
-                      <span className="font-medium">{attempt.resultCode}</span>
-                      {attempt.refusalReason ? (
-                        <span className="ml-2 text-xs text-[#5C6B84]">({attempt.refusalReason})</span>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
 
       <Toast toast={toast} onClose={clearToast} />
