@@ -204,7 +204,7 @@ export default function CardWalletViewer({
           <div className="mx-auto w-full max-w-[460px] rounded-[28px] border border-[#D8E2F2] bg-gradient-to-br from-[#F9FBFF] via-[#F0F5FF] to-[#F8FAFF] p-6 text-center shadow-[0_30px_70px_-42px_rgba(26,48,92,0.28)]">
             <div className="mx-auto h-[180px] w-full max-w-[300px] rounded-2xl border border-dashed border-[#B7C7E6] bg-[#EDF3FF]" />
             <p className="mt-4 text-base font-semibold text-[#0F1D3D]">No cards issued yet</p>
-            <p className="mt-1 text-sm text-[#5C6B84]">Create your first Visa or Mastercard virtual card.</p>
+            <p className="mt-1 text-sm text-[#5C6B84]">Create your first virtual card</p>
           </div>
         ) : (
           <>

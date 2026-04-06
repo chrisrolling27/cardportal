@@ -5,6 +5,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "cardportal_auth_v1";
 
+// In dev, skip localStorage so each full reload starts at the login screen (no "remember me").
+const PERSIST_AUTH = process.env.NODE_ENV === "production";
+
 function normalizeSession(data) {
   return {
     accountHolderId: data?.accountHolderId || "",
@@ -30,11 +33,17 @@ export function AuthProvider({ children }) {
   const setSession = useCallback((nextUser) => {
     const session = normalizeSession(nextUser);
     setUser(session);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    if (PERSIST_AUTH) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    }
   }, []);
 
   useEffect(() => {
     const restore = async () => {
+      if (!PERSIST_AUTH) {
+        setRestoring(false);
+        return;
+      }
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;

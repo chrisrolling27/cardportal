@@ -10,6 +10,10 @@ const inter = Inter({
 export const metadata = {
   title: "CardPortal",
   description: "Adyen Balance Platform fintech demo",
+  icons: {
+    icon: "/cardportal-mark.svg",
+    apple: "/cardportal-mark.svg",
+  },
 };
 
 export default function RootLayout({ children }) {

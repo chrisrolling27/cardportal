@@ -223,27 +223,30 @@ export default function CardsContent() {
             })}
           </div>
 
-          <div className="grid gap-2 md:max-w-md">
+          <div className="grid gap-2 md:max-w-2xl">
             <label htmlFor="card-reference" className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]">
               Reference
             </label>
-            <input
-              id="card-reference"
-              type="text"
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              className="ca-input"
-              disabled={isCreating}
-              maxLength={20}
-            />
-          </div>
-
-          <div className="w-full md:max-w-md">
-            <button type="submit" className="ca-button-dark h-10 w-full" disabled={isIssueCardDisabled}>
-              {isCreating ? "Creating..." : "Issue payment instrument"}
-            </button>
+            <div className="flex flex-row flex-wrap items-end gap-2">
+              <input
+                id="card-reference"
+                type="text"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                className="ca-input min-h-10 min-w-0 flex-1"
+                disabled={isCreating}
+                maxLength={20}
+              />
+              <button
+                type="submit"
+                className="ca-button-dark h-10 shrink-0 px-4 sm:px-5"
+                disabled={isIssueCardDisabled}
+              >
+                {isCreating ? "Creating..." : "Issue payment instrument"}
+              </button>
+            </div>
             <p
-              className={`mt-2 text-right text-xs font-semibold ${
+              className={`text-right text-xs font-semibold ${
                 isIssueCardDisabled ? "text-[#94A3B8]" : "text-[#334155]"
               }`}
             >

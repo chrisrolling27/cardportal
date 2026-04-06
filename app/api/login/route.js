@@ -67,9 +67,7 @@ export async function POST(request) {
     } catch (_error) {
       payload = {};
     }
-    const { honeypot, formStartedAt, email, accountHolderId, useKnownAhBackdoor } = payload;
-
-    const knownAccountHolderId = String(process.env.KNOWN_AH || "").trim();
+    const { honeypot, formStartedAt, email, accountHolderId } = payload;
 
     if (honeypot) {
       return Response.json({ error: "Invalid request." }, { status: 400 });
@@ -101,20 +99,11 @@ export async function POST(request) {
     if (normalizedAccountHolderId) {
       // Restore path: validate existing local session quickly by AH id.
       session = await hydrateSessionFromAccountHolderId(normalizedAccountHolderId);
-    } else if (useKnownAhBackdoor || (!normalizedEmail && knownAccountHolderId)) {
-      // Keep the KNOWN_AH backdoor for fast demo access.
-      if (!knownAccountHolderId) {
-        return Response.json({ error: "KNOWN_AH is not configured in environment." }, { status: 500 });
-      }
-      session = await hydrateSessionFromAccountHolderId(knownAccountHolderId);
     } else if (normalizedEmail) {
-      // Temporary login flow: lookup by AH reference(email), then auto-provision AH + BA on first sign-in.
+      // Match existing account holder by reference/description, or provision LE → AH → balance account.
       session = await loginOrProvisionSessionByReference(normalizedEmail);
     } else {
-      return Response.json(
-        { error: "Email is required. Or use KNOWN_AH backdoor if configured." },
-        { status: 400 }
-      );
+      return Response.json({ error: "Email is required." }, { status: 400 });
     }
 
     clearFailedLogins(ip);
