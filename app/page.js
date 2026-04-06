@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
+import SmokeBackground from "@/components/SmokeBackground";
 import { useAuth } from "@/context/AuthContext";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 
@@ -23,14 +24,15 @@ export default function LandingPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F4F6FA] p-6">
-      <div className="w-full max-w-md">
-        <p className="mb-2 text-center text-xs font-medium uppercase tracking-[0.14em] text-[#6A7993]">Adyen</p>
+    <main className="relative flex min-h-screen items-center justify-center p-6">
+      <SmokeBackground />
+
+      <div className="relative z-10 w-full max-w-md">
+        <p className="mb-2 text-center text-xs font-medium uppercase tracking-[0.14em] text-[#0ABF53]">Adyen</p>
         <h1 className="mb-2 text-center text-4xl font-semibold tracking-tight text-[#0B1222]">CardPortal</h1>
-        <p className="mb-6 text-center text-sm text-[#53627B]">
-          Dashboard for Balance Platform demos.
-        </p>
-        <LoginForm />
+        <div className="rounded-2xl shadow-[0_4px_30px_rgba(10,191,83,0.12)]">
+          <LoginForm />
+        </div>
       </div>
     </main>
   );

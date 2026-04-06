@@ -62,11 +62,6 @@ export default function LoginForm() {
   return (
     <div className="ca-surface w-full max-w-md p-7">
       <form className="space-y-4" onSubmit={onLoginWithEmail}>
-        <p className="rounded-lg border border-[#E4E9F2] bg-[#F8FAFD] px-3 py-2 text-sm text-[#4B5A72]">
-          Sign in with email. We match your address to an existing account holder&apos;s reference or description. On
-          first visit we create a legal entity (with your email as reference), then an account holder and balance account.
-        </p>
-
         {loadingMode === "email" && (
           <div
             className="flex items-center gap-3 rounded-lg border border-[#E4E9F2] bg-white px-3 py-3 text-sm text-[#4B5A72]"
@@ -114,7 +109,7 @@ export default function LoginForm() {
           disabled={Boolean(loadingMode)}
           className="ca-button w-full"
         >
-          {loadingMode === "email" ? "Signing in..." : "Continue"}
+          {loadingMode === "email" ? "Signing in..." : "Login"}
         </button>
       </form>
     </div>

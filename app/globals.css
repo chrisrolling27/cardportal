@@ -45,7 +45,7 @@ body {
 }
 
 .ca-button {
-  @apply inline-flex items-center justify-center rounded-lg border border-transparent bg-[#0ABF53] px-4 py-2 text-sm font-semibold text-[#00112C] transition hover:bg-[#099A43] disabled:cursor-not-allowed disabled:opacity-70;
+  @apply inline-flex items-center justify-center rounded-lg border border-transparent bg-[#0ABF53] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#099A43] disabled:cursor-not-allowed disabled:opacity-70;
 }
 
 .ca-button-dark {
