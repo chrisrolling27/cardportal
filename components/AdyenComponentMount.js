@@ -44,7 +44,6 @@ export default function AdyenComponentMount({
         const map = {
           TransactionsOverview: sdk.TransactionsOverview,
           PayoutsOverview: sdk.PayoutsOverview,
-          CapitalOverview: sdk.CapitalOverview,
           ReportsOverview: sdk.ReportsOverview,
         };
         const Component = map[componentName];
