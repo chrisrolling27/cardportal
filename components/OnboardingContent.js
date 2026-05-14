@@ -211,6 +211,10 @@ export default function OnboardingContent() {
       return;
     }
 
+    const normalizedWebAddress = /^https?:\/\//i.test(form.webAddress.trim())
+      ? form.webAddress.trim()
+      : `https://${form.webAddress.trim()}`;
+
     try {
       await trackedFetch("/api/adyen/legal-entity/business-lines", {
         method: "POST",
@@ -218,7 +222,7 @@ export default function OnboardingContent() {
         body: JSON.stringify({
           legalEntityId,
           industryCode: form.industryCode,
-          webAddress: form.webAddress,
+          webAddress: normalizedWebAddress,
           businessName: form.businessName,
         }),
       });
@@ -295,11 +299,11 @@ export default function OnboardingContent() {
               </label>
               <input
                 id="onboarding-business-website"
-                type="url"
+                type="text"
                 value={form.webAddress}
                 onChange={(event) => setForm((prev) => ({ ...prev, webAddress: event.target.value }))}
                 className="ca-input"
-                placeholder="https://example.com"
+                placeholder="www.example.com"
                 required
               />
             </div>
