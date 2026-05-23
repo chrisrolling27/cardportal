@@ -335,21 +335,26 @@ export default function OnboardingContent() {
           </form>
         ) : null}
 
-        <div className="mt-5 space-y-2">
+        <div className="mt-5">
           {businessLinesLoading ? (
             <p className="text-sm text-[#5C6B84]">Loading business information…</p>
           ) : businessLines.length ? (
-            businessLines.map((line) => (
-              <div key={line.id} className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm">
-                <p className="font-medium text-[#2E3D5B]">{line.id}</p>
-                <p className="mt-1 text-[#5C6B84]">
-                  Industry (MCC): <span className="font-medium text-[#364761]">{industryLabelFromCode(line.industryCode)}</span>
-                </p>
-                <p className="mt-1 text-[#5C6B84]">
-                  Website: <span className="font-medium text-[#364761]">{webAddressesFromBusinessLine(line)}</span>
-                </p>
-              </div>
-            ))
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {businessLines.map((line) => (
+                <div
+                  key={line.id}
+                  className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm"
+                >
+                  <p className="truncate font-medium text-[#2E3D5B]">{line.id}</p>
+                  <p className="mt-1 text-[#5C6B84]">
+                    Industry (MCC): <span className="font-medium text-[#364761]">{industryLabelFromCode(line.industryCode)}</span>
+                  </p>
+                  <p className="mt-1 truncate text-[#5C6B84]">
+                    Website: <span className="font-medium text-[#364761]">{webAddressesFromBusinessLine(line)}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
           ) : (
             <EmptyState
               title="No business information yet"

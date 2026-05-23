@@ -9,7 +9,7 @@ function cardGradient(brand) {
   if (normalized.includes("visa")) {
     return "from-[#1A1F71] via-[#1434CB] to-[#0E1858]";
   }
-  return "from-[#4B1020] via-[#8F1E35] to-[#C93A2F]";
+  return "from-[#1A0A0F] via-[#3D0A14] to-[#7A1525]";
 }
 
 function formatPan(value) {
@@ -31,10 +31,6 @@ function formatCardReference(value) {
   const normalized = String(value || "").trim();
   if (!normalized) return "";
   return normalized.slice(0, 20);
-}
-
-function formatPaymentInstrumentId(value) {
-  return String(value || "").trim();
 }
 
 const SWIPE_THRESHOLD = 48;
@@ -111,7 +107,6 @@ export default function CardWalletViewer({
   const expiry = isRevealed ? formatExpiry(cachedReveal?.expiration) || "—" : "••/••";
   const cvc = isRevealed ? cachedReveal?.cvc || "—" : "•••";
   const cardReference = formatCardReference(activeCard?.reference);
-  const paymentInstrumentId = formatPaymentInstrumentId(activeCard?.id);
 
   const goNext = () => {
     if (!canRotate) return;
@@ -262,23 +257,14 @@ export default function CardWalletViewer({
                       activeCard?.card?.brand
                     )} ${slideDirection === "prev" ? "card-wallet-slide-in-prev" : "card-wallet-slide-in-next"} p-5 text-white shadow-[0_24px_60px_-24px_rgba(11,18,34,0.88)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_36px_80px_-30px_rgba(11,18,34,0.95)]`}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex h-10 items-center justify-between gap-4">
                       <div className="h-10 w-14 shrink-0 rounded-md bg-gradient-to-br from-[#D9B45A] to-[#A68235]" />
-                      <div
-                        className={
-                          isVisaBrand(activeCard?.card?.brand)
-                            ? "min-w-0 shrink-0 text-right -mr-2 translate-x-2 sm:-mr-3 sm:translate-x-3"
-                            : "min-w-0 shrink-0 text-right"
-                        }
-                      >
+                      <div className="flex h-10 min-w-0 shrink-0 items-center justify-end text-right">
                         <CardNetworkBrandMark brand={activeCard?.card?.brand} tone="onDark" size="wallet" />
                       </div>
                     </div>
-                    <p className="mt-8 font-mono text-[22px] tracking-[0.16em]">{cardNumber}</p>
-                    <p className="mt-3 text-center text-[10px] uppercase tracking-[0.08em] leading-tight text-white/85">
-                      {cardReference}
-                    </p>
-                    <div className="mt-7 flex items-end justify-between gap-4">
+                    <p className="mt-10 font-mono text-[22px] tracking-[0.16em]">{cardNumber}</p>
+                    <div className="mt-8 flex items-end justify-between gap-4">
                       <div>
                         <p className="text-[11px] uppercase tracking-[0.12em] text-white/75">Expiry</p>
                         <p className="text-sm font-semibold">{expiry}</p>
@@ -288,9 +274,11 @@ export default function CardWalletViewer({
                         <p className="text-sm font-semibold">{cvc}</p>
                       </div>
                     </div>
-                    <p className="absolute bottom-4 right-5 max-w-[76%] text-right text-[10px] uppercase tracking-[0.08em] leading-tight text-white/85">
-                      {paymentInstrumentId}
-                    </p>
+                    {cardReference ? (
+                      <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.14em] text-white/80">
+                        {cardReference}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 

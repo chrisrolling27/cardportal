@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
-import { formatCurrency } from "@/lib/utils";
 
 const DEFAULT_AMOUNT = "100.00";
 
@@ -164,7 +163,6 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
       return;
     }
     const amountMinor = amountMinorRounded;
-    const amountLabel = formatCurrency(amountMinor, "USD");
 
     try {
       setIsSubmitting(true);
@@ -216,9 +214,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
       setError("");
       setForm((prev) => ({ ...prev, amount: DEFAULT_AMOUNT }));
       if (onSuccess) {
-        const summary = isTransferInstrumentToBalance
-          ? `Top Up for ${amountLabel} successful`
-          : `Transfer for ${amountLabel} successful`;
+        const summary = isTransferInstrumentToBalance ? "Top Up successful" : "Transfer successful";
         onSuccess(summary);
       }
     } catch (err) {

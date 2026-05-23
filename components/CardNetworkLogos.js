@@ -11,7 +11,10 @@ export function isVisaBrand(brand) {
  */
 export function VisaWordmark({ tone = "onDark", size = "wallet", className = "" }) {
   const color = tone === "onDark" ? "text-white" : "text-[#1434CB]";
-  const box = size === "wallet" ? "h-10 w-[7rem] sm:h-11 sm:w-[7.75rem]" : "h-8 w-[5.5rem] sm:h-9 sm:w-[6.25rem]";
+  const box =
+    size === "wallet"
+      ? "h-12 w-[8rem] translate-x-3 sm:h-[3.25rem] sm:w-[9rem] sm:translate-x-4"
+      : "h-8 w-[5.5rem] sm:h-9 sm:w-[6.25rem]";
   return (
     <svg
       className={`${color} ${box} shrink-0 ${className}`}
@@ -36,19 +39,25 @@ export function MastercardBrandMark({
   className = "",
 }) {
   const textColor = tone === "onDark" ? "text-white" : "text-[#0B1222]";
-  const svgBox = size === "wallet" ? "h-14 w-[5.85rem]" : "h-9 w-[3.75rem] sm:h-10 sm:w-[4.25rem]";
-  const textSize =
-    size === "wallet" ? "text-xs font-semibold sm:text-[13px]" : "text-xs font-semibold sm:text-sm";
+  const svgBox =
+    size === "wallet" ? "h-10 w-[4rem] sm:h-11 sm:w-[4.5rem]" : "h-9 w-[3.75rem] sm:h-10 sm:w-[4.25rem]";
+  const showWordmark = size === "picker";
+  const textSize = "text-xs font-semibold sm:text-sm";
   const flexDir = layout === "row" ? "flex-row items-center gap-2.5" : "flex-col items-end gap-1";
-  const wordmark = size === "picker" ? "Mastercard" : "mastercard";
 
   return (
     <div className={`flex ${flexDir} ${className}`} role="img" aria-label="Mastercard">
       <svg className={`${svgBox} shrink-0`} viewBox="0 0 46 28" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <circle cx="16" cy="14" r="11" fill="#EB001B" />
-        <circle cx="30" cy="14" r="11" fill="#F79E1B" />
+        <circle cx="17" cy="14" r="9" fill="#EB001B" />
+        <circle cx="29" cy="14" r="9" fill="#F79E1B" />
+        <path
+          d="M23 7.55a8.997 8.997 0 010 12.9 8.997 8.997 0 010-12.9z"
+          fill="#FF5F00"
+        />
       </svg>
-      <span className={`${textSize} leading-none tracking-tight ${textColor}`}>{wordmark}</span>
+      {showWordmark ? (
+        <span className={`${textSize} leading-none tracking-tight ${textColor}`}>Mastercard</span>
+      ) : null}
     </div>
   );
 }

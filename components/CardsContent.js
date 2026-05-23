@@ -164,7 +164,7 @@ export default function CardsContent() {
       <section className="ca-panel">
         <h2 className="ca-section-title">Issue card</h2>
         <p className="mt-1 text-sm text-[#5C6B84]">
-          Create up to {MAX_PAYMENT_INSTRUMENTS} payment instruments to spend funds in your balance account{" "}
+          Create up to {MAX_PAYMENT_INSTRUMENTS} payment instruments to spend funds from{" "}
           {user?.balanceAccountId || DEFAULT_BA_REFERENCE}
         </p>
         <form onSubmit={createCard} className="mt-4 space-y-4">
