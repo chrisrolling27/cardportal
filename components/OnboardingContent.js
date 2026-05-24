@@ -144,7 +144,7 @@ export default function OnboardingContent() {
   const allCapabilitiesSatisfied = capabilities.length > 0 && capabilities.every((cap) => cap.allowed === "Yes");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <section className="ca-panel">
         <h2 className="ca-section-title">Account Holder</h2>
         <ul className="space-y-2 text-sm text-[#2E3D5B]">

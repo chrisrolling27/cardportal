@@ -96,7 +96,7 @@ export default function HomePage() {
   }, [overview]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Account" subtitle="View account details and transfer funds" />
 
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:items-stretch">

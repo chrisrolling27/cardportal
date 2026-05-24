@@ -218,7 +218,7 @@ export default function CardWalletViewer({
                   onClick={goPrev}
                   disabled={!canRotate}
                   aria-label="Previous card"
-                  className="absolute -left-12 top-1/2 z-20 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[#C8D6EE] bg-white text-3xl text-[#233A66] shadow-[0_18px_38px_-26px_rgba(20,43,88,0.7)] transition hover:scale-105 hover:text-[#0F1D3D] disabled:cursor-not-allowed disabled:opacity-40 md:-left-14"
+                  className="absolute -left-12 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[#C8D6EE] bg-white text-3xl text-[#233A66] shadow-[0_18px_38px_-26px_rgba(20,43,88,0.7)] transition hover:scale-105 hover:text-[#0F1D3D] disabled:cursor-not-allowed disabled:opacity-40 sm:inline-flex md:-left-14"
                 >
                   <span>‹</span>
                 </button>
@@ -227,7 +227,7 @@ export default function CardWalletViewer({
                   onClick={goNext}
                   disabled={!canRotate}
                   aria-label="Next card"
-                  className="absolute -right-12 top-1/2 z-20 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[#C8D6EE] bg-white text-3xl text-[#233A66] shadow-[0_18px_38px_-26px_rgba(20,43,88,0.7)] transition hover:scale-105 hover:text-[#0F1D3D] disabled:cursor-not-allowed disabled:opacity-40 md:-right-14"
+                  className="absolute -right-12 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[#C8D6EE] bg-white text-3xl text-[#233A66] shadow-[0_18px_38px_-26px_rgba(20,43,88,0.7)] transition hover:scale-105 hover:text-[#0F1D3D] disabled:cursor-not-allowed disabled:opacity-40 sm:inline-flex md:-right-14"
                 >
                   <span>›</span>
                 </button>

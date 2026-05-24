@@ -571,7 +571,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Checkout" subtitle="Simulate a checkout purchase with your issued card" />
 
       <section className="ca-panel">

@@ -183,7 +183,7 @@ export default function PayoutsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Sweeps" subtitle="Configure a scheduled transfer of funds to your Transfer Instrument" />
 
       <section className="ca-panel">
@@ -219,7 +219,7 @@ export default function PayoutsPage() {
         ) : null}
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-[#EDF1F7] bg-[#FBFCFF] p-5">
+          <div className="rounded-xl border border-[#EDF1F7] bg-[#FBFCFF] p-4 sm:p-5">
             <h3 className="text-sm font-semibold text-[#00112C]">Current Sweep</h3>
             {isLoadingSweep ? (
               <p className="ca-muted mt-2 text-sm">Loading sweep...</p>
@@ -270,7 +270,7 @@ export default function PayoutsPage() {
             )}
           </div>
 
-          <form onSubmit={submitSweep} className="rounded-xl border border-[#EDF1F7] bg-white p-5">
+          <form onSubmit={submitSweep} className="rounded-xl border border-[#EDF1F7] bg-white p-4 sm:p-5">
             <h3 className="text-sm font-semibold text-[#00112C]">{hasSweep ? "Edit Sweep" : "Setup Sweep"}</h3>
 
             <div className="mt-4 grid gap-3">

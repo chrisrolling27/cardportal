@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Menu } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { useAuth } from "@/context/AuthContext";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
@@ -12,7 +13,12 @@ export default function DashboardShell({ children }) {
   const searchParams = useSearchParams();
   const { user, restoring, setSession } = useAuth();
   const [rehydrating, setRehydrating] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const rehydrateAttempted = useRef(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (restoring || user) return;
@@ -57,8 +63,21 @@ export default function DashboardShell({ children }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 bg-[#F4F6FA] p-6">{children}</main>
+      <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#DCE3EF] bg-[#0A1633] px-4 text-white lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open navigation"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white/10"
+          >
+            <Menu size={22} />
+          </button>
+          <p className="text-lg font-extrabold tracking-tight">CardPortal</p>
+        </header>
+        <main className="flex-1 bg-[#F4F6FA] p-4 sm:p-6">{children}</main>
+      </div>
     </div>
   );
 }

@@ -10,7 +10,7 @@ export default function ApiHistoryContent() {
   const [selected, setSelected] = useState(null);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <section className="ca-surface overflow-hidden">
         <div className="overflow-x-auto">
           <table className="ca-table table-fixed">

@@ -3,16 +3,30 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { NAV_ITEMS } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, onMobileClose }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  return (
-    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col overflow-y-auto border-r border-[#DCE3EF] bg-[#0A1633] text-white">
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
+  const handleNavClick = () => {
+    if (onMobileClose) onMobileClose();
+  };
+
+  const panel = (
+    <aside className="flex h-full w-[260px] shrink-0 flex-col overflow-y-auto border-r border-[#DCE3EF] bg-[#0A1633] text-white">
       <div className="border-b border-white/10 p-5">
         <div className="flex items-center">
           <p className="text-3xl font-extrabold tracking-tight text-white">CardPortal</p>
@@ -39,6 +53,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleNavClick}
                 className={`block rounded-lg border-l-4 px-3 py-2.5 text-sm font-semibold transition ${
                   active
                     ? "border-[#0ABF53] bg-white/10 text-white"
@@ -57,6 +72,7 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={() => {
+            if (onMobileClose) onMobileClose();
             logout();
             router.push("/");
           }}
@@ -67,5 +83,31 @@ export default function Sidebar() {
       </div>
     </aside>
   );
-}
 
+  return (
+    <>
+      {/* Desktop: sticky sidebar */}
+      <div className="sticky top-0 hidden h-screen lg:block">{panel}</div>
+
+      {/* Mobile: slide-in drawer */}
+      <div
+        className={`fixed inset-0 z-40 lg:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!mobileOpen}
+      >
+        <div
+          onClick={onMobileClose}
+          className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${
+            mobileOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`absolute inset-y-0 left-0 h-full transform transition-transform duration-200 ease-out ${
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          {panel}
+        </div>
+      </div>
+    </>
+  );
+}
