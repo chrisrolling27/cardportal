@@ -318,6 +318,9 @@ export default function CheckoutPage() {
         risk: {
           enabled: false,
         },
+        analytics: {
+          enabled: false,
+        },
         countryCode: "US",
         locale: "en-US",
         amount: {
