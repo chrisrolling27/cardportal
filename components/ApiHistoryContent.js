@@ -58,8 +58,8 @@ export default function ApiHistoryContent() {
       </section>
 
       {selected ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="ca-surface w-full max-w-3xl p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+          <div className="ca-surface max-h-[90vh] w-full max-w-3xl overflow-y-auto p-4 sm:p-6">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="ca-section-title">API Call Details</h3>
               <button onClick={() => setSelected(null)} className="ca-button-secondary">

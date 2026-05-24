@@ -254,7 +254,7 @@ export default function CardWalletViewer({
                     key={`${activeCardId || "card"}-${activeIndex}-${slideDirection}`}
                     className={`relative mx-auto h-[220px] w-full rounded-2xl bg-gradient-to-br ${cardGradient(
                       activeCard?.card?.brand
-                    )} ${slideDirection === "prev" ? "card-wallet-slide-in-prev" : "card-wallet-slide-in-next"} p-5 text-white shadow-[0_24px_60px_-24px_rgba(11,18,34,0.88)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_36px_80px_-30px_rgba(11,18,34,0.95)]`}
+                    )} ${slideDirection === "prev" ? "card-wallet-slide-in-prev" : "card-wallet-slide-in-next"} p-4 text-white shadow-[0_24px_60px_-24px_rgba(11,18,34,0.88)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_36px_80px_-30px_rgba(11,18,34,0.95)] sm:p-5`}
                   >
                     <div className="flex h-10 items-center justify-between gap-4">
                       <div className="h-10 w-14 shrink-0 rounded-md bg-gradient-to-br from-[#D9B45A] to-[#A68235]" />
@@ -262,7 +262,7 @@ export default function CardWalletViewer({
                         <CardNetworkBrandMark brand={activeCard?.card?.brand} tone="onDark" size="wallet" />
                       </div>
                     </div>
-                    <p className="mt-10 font-mono text-[22px] tracking-[0.16em]">{cardNumber}</p>
+                    <p className="mt-10 whitespace-nowrap font-mono text-[16px] tracking-[0.1em] sm:text-[22px] sm:tracking-[0.16em]">{cardNumber}</p>
                     <div className="mt-8 flex items-end justify-between gap-4">
                       <div>
                         <p className="text-[11px] uppercase tracking-[0.12em] text-white/75">Expiry</p>
@@ -274,14 +274,14 @@ export default function CardWalletViewer({
                       </div>
                     </div>
                     {cardReference ? (
-                      <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.14em] text-white/80">
+                      <p className="absolute bottom-3 left-1/2 max-w-[90%] -translate-x-1/2 truncate text-[11px] uppercase tracking-[0.14em] text-white/80">
                         {cardReference}
                       </p>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="mx-auto mt-5 flex w-full max-w-[380px] items-center rounded-full border border-[#CFDAEE] bg-white/70 px-3 py-2 backdrop-blur-xl">
+                <div className="mx-auto mt-5 flex w-full max-w-[380px] items-center rounded-full border border-[#CFDAEE] bg-white/70 px-2 py-2 backdrop-blur-xl sm:px-3">
                   <div className="flex flex-1 items-center gap-2">
                     {walletCards.map((card, index) => (
                       <button
@@ -299,13 +299,13 @@ export default function CardWalletViewer({
                       />
                     ))}
                     {walletCards.length >= 4 ? (
-                      <span className="ml-1 rounded-full border border-[#CFDAEE] bg-[#EAF0FB] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#4C5E7E]">
+                      <span className="ml-1 hidden rounded-full border border-[#CFDAEE] bg-[#EAF0FB] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#4C5E7E] sm:inline-flex">
                         {activeIndex + 1} of {walletCards.length}
                       </span>
                     ) : null}
                   </div>
 
-                  <div className="mx-3 h-5 w-px bg-[#CFDAEE]" />
+                  <div className="mx-2 h-5 w-px bg-[#CFDAEE] sm:mx-3" />
 
                   <button
                     type="button"
