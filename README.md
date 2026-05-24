@@ -1,48 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# CardPortal
 
-## Getting Started
+**[cardportal.dev](https://cardportal.dev)**
 
-First, run the development server:
+A demo environment for exploring Adyen's Balance Platform and Card Issuing APIs end-to-end. Sign up, complete hosted onboarding, issue virtual cards, spend them through a checkout flow, configure sweeps, and watch every underlying API call in real time.
+
+## What you can do
+
+- **Hosted Onboarding** — run through Adyen's KYC/KYB flow for a legal entity
+- **Issue Cards** — create virtual Visa and Mastercard payment instruments
+- **Spend Cards** — pay with your issued cards via an Adyen Drop-in checkout
+- **Sweeps & Payouts** — configure push/pull sweeps and view payout activity
+- **Capital & Reports** — explore embedded Adyen Platform Experience components
+- **API History** — every Adyen request and response, logged with status, detail, and full payloads
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-### HTTPS local dev for Adyen Drop-in
-
-To avoid browser "secure connection" warnings in card autofill and payment forms, run the app over HTTPS in local development:
+For HTTPS (recommended when testing Drop-in / card autofill):
 
 ```bash
 npm run dev:https
 ```
 
-Then open [https://localhost:3000](https://localhost:3000).
+Copy `.env.example` to `.env.local` and fill in your Adyen test credentials.
 
-If you use HTTPS locally, make sure your Adyen allowed origins include `https://localhost:3000` (in addition to `http://localhost:3000` if you still use both).
+## References
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Live app: **[cardportal.dev](https://cardportal.dev)**
+- [Adyen API Explorer](https://docs.adyen.com/api-explorer/)
