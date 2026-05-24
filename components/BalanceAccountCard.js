@@ -31,54 +31,6 @@ export default function BalanceAccountCard({
   transferInstrumentId,
   className = "",
 }) {
-  const [copiedKey, setCopiedKey] = useState("");
-  const resetTimerRef = useRef(null);
-
-  const clearResetTimer = useCallback(() => {
-    if (resetTimerRef.current) {
-      window.clearTimeout(resetTimerRef.current);
-      resetTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      clearResetTimer();
-    };
-  }, [clearResetTimer]);
-
-  const copyValue = useCallback(
-    async (key, value) => {
-      if (!value) return;
-
-      try {
-        if (navigator?.clipboard?.writeText) {
-          await navigator.clipboard.writeText(value);
-        } else {
-          const textarea = document.createElement("textarea");
-          textarea.value = value;
-          textarea.setAttribute("readonly", "");
-          textarea.style.position = "absolute";
-          textarea.style.left = "-9999px";
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand("copy");
-          document.body.removeChild(textarea);
-        }
-
-        setCopiedKey(key);
-        clearResetTimer();
-        resetTimerRef.current = window.setTimeout(() => {
-          setCopiedKey("");
-          resetTimerRef.current = null;
-        }, COPY_RESET_MS);
-      } catch {
-        // Intentionally silent. We keep the UI stable if clipboard access is blocked.
-      }
-    },
-    [clearResetTimer]
-  );
-
   const ids = [
     { key: "balance", label: "Balance Account ID", value: balanceAccountId || "—" },
     { key: "holder", label: "Account Holder ID", value: accountHolderId || "—" },
