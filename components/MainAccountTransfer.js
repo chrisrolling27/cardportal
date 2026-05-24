@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 
-const DEFAULT_AMOUNT = "100.00";
+const DEFAULT_AMOUNT = "500.00";
 
 const TOPUP_OK_RESULT_CODES = new Set(["Authorised", "Pending", "Received"]);
 
@@ -46,7 +46,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
         key: `balanceAccount:${balanceAccountId}`,
         type: "balanceAccount",
         id: balanceAccountId,
-        label: `Balance Account (${balanceAccountId})`,
+        label: `Balance Account ${balanceAccountId}`,
       });
     }
     if (transferInstrumentId) {
@@ -54,7 +54,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
         key: `transferInstrument:${transferInstrumentId}`,
         type: "transferInstrument",
         id: transferInstrumentId,
-        label: `Transfer Instrument (${transferInstrumentId})`,
+        label: `Transfer Instrument ${transferInstrumentId}`,
       });
     }
     return options;
@@ -63,20 +63,8 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
     () => Object.fromEntries(endpointOptions.map((option) => [option.key, option])),
     [endpointOptions]
   );
-  const sourceOptions = useMemo(
-    () =>
-      endpointOptions.filter((option) =>
-        option.type === "balanceAccount" ? canSendToTransferInstrument : canReceiveFromTransferInstrument
-      ),
-    [canReceiveFromTransferInstrument, canSendToTransferInstrument, endpointOptions]
-  );
-  const destinationOptions = useMemo(
-    () =>
-      endpointOptions.filter((option) =>
-        option.type === "transferInstrument" ? canSendToTransferInstrument : canReceiveFromTransferInstrument
-      ),
-    [canReceiveFromTransferInstrument, canSendToTransferInstrument, endpointOptions]
-  );
+  const sourceOptions = endpointOptions;
+  const destinationOptions = endpointOptions;
   const [form, setForm] = useState({
     sourceKey: "",
     recipientKey: "",
@@ -100,9 +88,11 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
 
   useEffect(() => {
     const defaultSource =
-      sourceOptions.find((option) => option.type === "balanceAccount")?.key || sourceOptions[0]?.key || "";
+      sourceOptions.find((option) => option.type === "transferInstrument")?.key ||
+      sourceOptions[0]?.key ||
+      "";
     const defaultRecipient =
-      destinationOptions.find((option) => option.type === "transferInstrument")?.key ||
+      destinationOptions.find((option) => option.type === "balanceAccount")?.key ||
       destinationOptions[0]?.key ||
       "";
     setForm((prev) => ({
@@ -230,16 +220,16 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
     <div>
       <h2 className="ca-section-title">Transfer Funds</h2>
 
-      <form onSubmit={submitTransfer} className="mt-4 grid gap-3">
+      <form onSubmit={submitTransfer} className="mt-3 grid gap-2">
         <label className="text-xs font-medium text-[#3B4556]">Source</label>
         <select
           className="ca-input"
           value={form.sourceKey}
           onChange={(event) => setForm((prev) => ({ ...prev, sourceKey: event.target.value }))}
-          disabled={isSubmitting}
+          disabled={isSubmitting || sourceOptions.length === 0}
         >
           {sourceOptions.length === 0 ? (
-            <option value="">No transfer endpoints available</option>
+            <option value="">No source available</option>
           ) : null}
           {sourceOptions.map((option) => (
             <option key={option.key} value={option.key}>
@@ -253,10 +243,10 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
           className="ca-input"
           value={form.recipientKey}
           onChange={(event) => setForm((prev) => ({ ...prev, recipientKey: event.target.value }))}
-          disabled={isSubmitting}
+          disabled={isSubmitting || destinationOptions.length === 0}
         >
           {destinationOptions.length === 0 ? (
-            <option value="">No transfer endpoints available</option>
+            <option value="">No destination available</option>
           ) : null}
           {destinationOptions.map((option) => (
             <option key={option.key} value={option.key}>
@@ -265,8 +255,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
           ))}
         </select>
 
-        <label className="text-xs font-medium text-[#3B4556]">Amount</label>
-        <div className="flex min-h-[42px] overflow-hidden rounded-lg border border-[#D8DFEA] bg-white transition focus-within:border-[#2575FC] focus-within:ring-2 focus-within:ring-[#2575FC]/15">
+        <div className="mt-3 flex min-h-[42px] overflow-hidden rounded-lg border border-[#D8DFEA] bg-white transition focus-within:border-[#2575FC] focus-within:ring-2 focus-within:ring-[#2575FC]/15">
           <span
             className="flex shrink-0 items-center border-r border-[#D8DFEA] bg-[#FBFCFF] px-3 text-sm font-medium text-[#5C6B84]"
             aria-hidden="true"
@@ -292,7 +281,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
 
         <button
           type="submit"
-          className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-transparent bg-gradient-to-r from-[#22C55E] via-[#16A34A] to-[#15803D] px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(21,128,61,0.28)] transition hover:-translate-y-0.5 hover:from-[#16A34A] hover:via-[#15803D] hover:to-[#166534] hover:shadow-[0_14px_30px_rgba(21,128,61,0.33)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+          className="mt-8 inline-flex h-10 w-full items-center justify-center rounded-lg border border-transparent bg-gradient-to-r from-[#22C55E] via-[#16A34A] to-[#15803D] px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(21,128,61,0.28)] transition hover:-translate-y-0.5 hover:from-[#16A34A] hover:via-[#15803D] hover:to-[#166534] hover:shadow-[0_14px_30px_rgba(21,128,61,0.33)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           disabled={!canSubmit}
         >
           {isSubmitting

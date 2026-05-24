@@ -196,7 +196,7 @@ export default function PayoutsPage() {
               isLoadingSweep
                 ? "bg-[#EDF1F7] text-[#5F6B7A]"
                 : hasSweep
-                  ? "bg-blue-50 text-blue-700"
+                  ? "bg-[#E1F5EE] text-[#1D9E75]"
                   : "bg-green-50 text-green-700"
             }`}
           >
@@ -250,18 +250,18 @@ export default function PayoutsPage() {
                     )}
                   </p>
                   <p className="ca-muted mt-3 text-xs">Frequency</p>
-                  <p className="mt-1 text-xl font-semibold text-blue-700">{frequencyLabel}</p>
+                  <p className="mt-1 text-xl font-semibold text-[#1D9E75]">{frequencyLabel}</p>
                 </div>
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <dt className="ca-muted">Sweep ID</dt>
-                  <dd className="truncate text-right font-semibold text-[#00112C]">{sweepId || "—"}</dd>
-                  <dt className="ca-muted">Balance Account</dt>
-                  <dd className="truncate text-right font-medium text-[#00112C]">{user?.balanceAccountId || "—"}</dd>
-                  <dt className="ca-muted">Transfer Instrument</dt>
-                  <dd className="truncate text-right font-medium text-[#00112C]">
+                <dl className="mt-4 grid grid-cols-[auto,1fr] gap-x-4 gap-y-3 text-sm">
+                  <dt className="ca-muted whitespace-nowrap">Sweep ID</dt>
+                  <dd className="break-all text-right font-semibold text-[#00112C]">{sweepId || "—"}</dd>
+                  <dt className="ca-muted whitespace-nowrap">Balance Account</dt>
+                  <dd className="break-all text-right font-medium text-[#00112C]">{user?.balanceAccountId || "—"}</dd>
+                  <dt className="ca-muted whitespace-nowrap">Transfer Instrument</dt>
+                  <dd className="break-all text-right font-medium text-[#00112C]">
                     {sweep.counterparty?.transferInstrumentId || "—"}
                   </dd>
-                  <dt className="ca-muted">Priority</dt>
+                  <dt className="ca-muted whitespace-nowrap">Priority</dt>
                   <dd className="text-right font-medium text-[#00112C]">Regular</dd>
                 </dl>
               </>

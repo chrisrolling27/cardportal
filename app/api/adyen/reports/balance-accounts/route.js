@@ -43,7 +43,7 @@ export async function GET() {
       `/accountHolders/${encodeURIComponent(reportsAccountHolderId)}/balanceAccounts`,
       "GET"
     );
-    return Response.json(data);
+    return Response.json({ ...data, accountHolderId: reportsAccountHolderId });
   } catch (error) {
     return Response.json(
       {

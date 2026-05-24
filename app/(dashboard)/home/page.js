@@ -70,7 +70,7 @@ export default function HomePage() {
   }, [loadOverview, user.balanceAccountId]);
 
   const balances = useMemo(() => {
-    const items = overview?.balanceAccount?.balances || [];
+    const items = overview?.balances || [];
     const usd =
       items.find((item) => (item?.currency || item?.available?.currency || item?.balance?.currency) === "USD") ||
       items[0];
@@ -97,7 +97,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Account" subtitle="Review your balance account and transactions" />
+      <PageHeader title="Account" subtitle="View account details and transfer funds" />
 
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:items-stretch">
         <div className="h-full min-h-0 w-full">
@@ -119,12 +119,21 @@ export default function HomePage() {
               cardsIssued={cardsIssued}
               balanceAccountId={user.balanceAccountId}
               accountHolderId={user.accountHolderId}
-              legalEntityId={user.legalEntityId}
+              transferInstrumentId={
+                user?.transferInstrumentId ||
+                user?.capabilities?.sendToTransferInstrument?.transferInstruments?.find(
+                  (ti) => ti?.id && ti?.allowed !== false
+                )?.id ||
+                user?.capabilities?.receiveFromTransferInstrument?.transferInstruments?.find(
+                  (ti) => ti?.id && ti?.allowed !== false
+                )?.id ||
+                ""
+              }
             />
           )}
         </div>
 
-        <div className="ca-panel h-full">
+        <div className="ca-panel-tight">
           <MainAccountTransfer onTransferComplete={loadOverview} onSuccess={showSuccess} onError={showError} />
         </div>
       </section>

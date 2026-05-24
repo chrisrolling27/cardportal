@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const TOAST_DISMISS_MS = 5000;
 
 function normalizeToastMessage(message) {
-  return String(message).trim();
+  return String(message).replace(/^\n+|\n+$/g, "");
 }
 
 export function useToast() {
@@ -70,7 +70,13 @@ export default function Toast({ toast }) {
           : "border-[#BFECD0] bg-[#E8F9EF] text-[#046E31]"
       }`}
     >
-      <p className="font-medium leading-snug">{toast.message}</p>
+      <div className="space-y-1">
+        {toast.message.split("\n").map((line, index) => (
+          <p key={index} className="text-sm font-medium leading-5">
+            {line}
+          </p>
+        ))}
+      </div>
     </div>
   );
 }

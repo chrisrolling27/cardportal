@@ -9,7 +9,7 @@ const MUTED = "text-[#70819D]";
 const BORDER = "border-[#E4E9F2]";
 const TILE_BG = "bg-[#F8FAFD]";
 const PANEL =
-  "h-full min-h-0 flex flex-col rounded-xl border border-[#E4E9F2] bg-white p-5 shadow-sm";
+  "flex flex-col rounded-xl border border-[#E4E9F2] bg-white p-5 shadow-sm";
 
 function MetricTile({ label, value }) {
   return (
@@ -31,7 +31,7 @@ export default function BalanceAccountCard({
   cardsCapacity = 4,
   balanceAccountId,
   accountHolderId,
-  legalEntityId,
+  transferInstrumentId,
   className = "",
 }) {
   const [copiedKey, setCopiedKey] = useState("");
@@ -83,9 +83,9 @@ export default function BalanceAccountCard({
   );
 
   const ids = [
-    { key: "balance", label: "Balance account ID", value: balanceAccountId || "—" },
-    { key: "holder", label: "Account holder ID", value: accountHolderId || "—" },
-    { key: "legal", label: "Legal entity ID", value: legalEntityId || "—" },
+    { key: "balance", label: "Balance Account ID", value: balanceAccountId || "—" },
+    { key: "holder", label: "Account Holder ID", value: accountHolderId || "—" },
+    { key: "transfer", label: "Transfer Instrument ID", value: transferInstrumentId || "" },
   ];
 
   const ccy = currency || "USD";
@@ -98,9 +98,7 @@ export default function BalanceAccountCard({
             className="h-2 w-2 shrink-0 rounded-full bg-[#1D9E75]"
             aria-hidden
           />
-          <p
-            className={`text-[11px] font-medium uppercase tracking-[0.05em] ${MUTED}`}
-          >
+          <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[#0B1222]">
             BALANCE ACCOUNT
           </p>
         </div>
@@ -109,7 +107,7 @@ export default function BalanceAccountCard({
         </span>
       </div>
 
-      <div className="mt-3 space-y-1.5">
+      <div className="mt-5 space-y-2">
         <p className={`text-xs font-medium ${MUTED}`}>Available balance</p>
         <div className="flex flex-wrap items-baseline gap-2">
           <p className="text-4xl font-medium leading-none tracking-tight text-[#0B1222] tabular-nums">
@@ -119,7 +117,7 @@ export default function BalanceAccountCard({
         </div>
       </div>
 
-      <div className="mt-5 mb-4 grid w-full auto-cols-fr grid-flow-col gap-3">
+      <div className="mt-7 mb-2 grid w-full auto-cols-fr grid-flow-col gap-3">
         <MetricTile label="Balance" value={formatCurrency(balanceMinorUnits, ccy)} />
         <MetricTile label="Pending" value={formatCurrency(pendingMinorUnits, ccy)} />
         <MetricTile
@@ -128,7 +126,7 @@ export default function BalanceAccountCard({
         />
       </div>
 
-      <div className={`mt-auto border-t ${BORDER} pt-3`}>
+      <div className={`mt-7 border-t ${BORDER} pt-4`}>
         <div className="space-y-2">
           {ids.map((item) => {
             const isCopied = copiedKey === item.key;

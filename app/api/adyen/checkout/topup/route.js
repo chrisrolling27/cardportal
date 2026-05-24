@@ -65,11 +65,18 @@ export async function POST(request) {
       merchantAccount,
     };
 
-    const data = await adyenCheckoutRequest("/payments", "POST", transferPayload);
-    return Response.json(toClientSafePaymentResponse(data));
+    console.log("[topup] → POST /v71/payments", JSON.stringify(transferPayload, null, 2));
+    try {
+      const data = await adyenCheckoutRequest("/payments", "POST", transferPayload);
+      console.log("[topup] ← OK", JSON.stringify(data, null, 2));
+      return Response.json(toClientSafePaymentResponse(data));
+    } catch (adyenError) {
+      console.log("[topup] ← ERR", adyenError.status, JSON.stringify(adyenError.response, null, 2));
+      throw adyenError;
+    }
   } catch (error) {
     return Response.json(
-      { error: error.message || "Top-up payment failed." },
+      { error: error.message || "Top-up payment failed.", adyenResponse: error.response || null },
       { status: error.status || 500 }
     );
   }

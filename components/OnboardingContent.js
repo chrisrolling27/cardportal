@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
@@ -9,31 +9,12 @@ import { useApiHistory } from "@/context/ApiHistoryContext";
 import { useAuth } from "@/context/AuthContext";
 import { getApiErrorMessage } from "@/lib/apiError";
 
-const INDUSTRY_CODE_OPTIONS = [
-  { value: "45391", label: "45391 - Home furnishing stores" },
-  { value: "5734", label: "5734 - Computer software stores" },
-  { value: "5812", label: "5812 - Eating places and restaurants" },
-  { value: "5944", label: "5944 - Jewelry stores" },
-];
-
 const ONBOARDING_CAPABILITY_ORDER = [
   "issueCard",
   "useCard",
   "receiveFromTransferInstrument",
   "sendToTransferInstrument",
 ];
-
-function industryLabelFromCode(industryCode) {
-  if (!industryCode) return "—";
-  const matched = INDUSTRY_CODE_OPTIONS.find((option) => option.value === String(industryCode));
-  return matched?.label || `${industryCode} - Unmapped MCC`;
-}
-
-function webAddressesFromBusinessLine(line) {
-  const fromWebData = Array.isArray(line?.webData) ? line.webData.map((item) => item?.webAddress).filter(Boolean) : [];
-  if (fromWebData.length) return fromWebData.join(", ");
-  return line?.webAddress || "—";
-}
 
 /** Human-readable labels from Adyen capability `problems` (strings, verificationErrors, or generic objects). */
 function labelsFromCapabilityProblems(problems) {
@@ -115,53 +96,9 @@ function CapabilityIssueBadges({ labels }) {
 export default function OnboardingContent() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
-  const { toast, clearToast, showError, showSuccess } = useToast();
-  const [businessLines, setBusinessLines] = useState([]);
-  const [businessLinesLoading, setBusinessLinesLoading] = useState(true);
-  const [businessLinesError, setBusinessLinesError] = useState("");
-  const [form, setForm] = useState({
-    industryCode: "45391",
-    webAddress: "",
-    businessName: user?.companyName || "",
-  });
+  const { toast, clearToast, showError } = useToast();
   const [expandedCapabilityName, setExpandedCapabilityName] = useState(null);
   const legalEntityId = user?.legalEntityId || "";
-
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      businessName: prev.businessName || user?.companyName || "",
-    }));
-  }, [user?.companyName]);
-
-  const fetchData = useCallback(async () => {
-    if (!legalEntityId) {
-      setBusinessLines([]);
-      setBusinessLinesLoading(false);
-      setBusinessLinesError("No legal entity found in the current session.");
-      return;
-    }
-
-    setBusinessLinesLoading(true);
-    setBusinessLinesError("");
-    try {
-      const payload = await trackedFetch(
-        `/api/adyen/legal-entity/business-lines?legalEntityId=${encodeURIComponent(legalEntityId)}`
-      );
-      const list = payload?.businessLines || payload?.data || [];
-      setBusinessLines(Array.isArray(list) ? list : []);
-    } catch (error) {
-      const message = getApiErrorMessage(error);
-      setBusinessLines([]);
-      setBusinessLinesError(message);
-    } finally {
-      setBusinessLinesLoading(false);
-    }
-  }, [legalEntityId, trackedFetch]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const capabilities = useMemo(() => {
     const capabilityMap = user?.capabilities || {};
@@ -188,7 +125,7 @@ export default function OnboardingContent() {
       const data = await trackedFetch("/api/adyen/hosted-onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ legalEntityId }),
+        body: JSON.stringify({ legalEntityId, accountHolderId: user?.accountHolderId }),
       });
       if (data?.onboardingUrl) {
         window.open(data.onboardingUrl, "_blank", "noopener,noreferrer");
@@ -200,43 +137,8 @@ export default function OnboardingContent() {
     }
   };
 
-  const createBusinessLine = async (event) => {
-    event.preventDefault();
-    if (!legalEntityId) {
-      showError("Missing legal entity in session data.");
-      return;
-    }
-    if (businessLines.length > 0) {
-      showError("Business information has already been added for this legal entity.");
-      return;
-    }
-
-    const normalizedWebAddress = /^https?:\/\//i.test(form.webAddress.trim())
-      ? form.webAddress.trim()
-      : `https://${form.webAddress.trim()}`;
-
-    try {
-      await trackedFetch("/api/adyen/legal-entity/business-lines", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          legalEntityId,
-          industryCode: form.industryCode,
-          webAddress: normalizedWebAddress,
-          businessName: form.businessName,
-        }),
-      });
-      showSuccess("Business information saved.");
-      await fetchData();
-    } catch (error) {
-      const message = getApiErrorMessage(error) || "Failed to save business information.";
-      showError(message);
-    }
-  };
-
   const email = user?.email || "—";
   const primaryBalanceAccountId = user?.balanceAccountId || "—";
-  const canOfferCreation = !businessLinesLoading && !businessLinesError && businessLines.length === 0;
   const accountHolderStatus = user?.accountHolderStatus || "—";
   const isAccountHolderActive = String(accountHolderStatus).toLowerCase() === "active";
   const allCapabilitiesSatisfied = capabilities.length > 0 && capabilities.every((cap) => cap.allowed === "Yes");
@@ -268,138 +170,22 @@ export default function OnboardingContent() {
       </section>
 
       <section className="ca-panel">
-        <h2 className="ca-section-title mb-4">Business Information</h2>
-        {businessLinesError ? (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-            <p>{businessLinesError}</p>
-            <button type="button" onClick={fetchData} className="ca-button mt-3">
-              Retry lookup
-            </button>
-          </div>
-        ) : null}
-
-        {canOfferCreation ? (
-          <form onSubmit={createBusinessLine} className="grid gap-3 md:grid-cols-4">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="onboarding-business-name" className="text-xs font-medium text-[#3B4556]">
-                Name
-              </label>
-              <input
-                id="onboarding-business-name"
-                value={form.businessName}
-                onChange={(event) => setForm((prev) => ({ ...prev, businessName: event.target.value }))}
-                className="ca-input"
-                placeholder="Acme Corp"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="onboarding-business-website" className="text-xs font-medium text-[#3B4556]">
-                Website
-              </label>
-              <input
-                id="onboarding-business-website"
-                type="text"
-                value={form.webAddress}
-                onChange={(event) => setForm((prev) => ({ ...prev, webAddress: event.target.value }))}
-                className="ca-input"
-                placeholder="www.example.com"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="onboarding-industry" className="text-xs font-medium text-[#3B4556]">
-                Industry
-              </label>
-              <select
-                id="onboarding-industry"
-                value={form.industryCode}
-                onChange={(event) => setForm((prev) => ({ ...prev, industryCode: event.target.value }))}
-                className="ca-input"
-              >
-                {INDUSTRY_CODE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1 md:justify-end">
-              <span className="hidden text-xs font-medium text-[#3B4556] md:block md:invisible" aria-hidden>
-                Save
-              </span>
-              <button type="submit" className="ca-button">
-                Save business information
-              </button>
-            </div>
-          </form>
-        ) : null}
-
-        <div className="mt-5">
-          {businessLinesLoading ? (
-            <p className="text-sm text-[#5C6B84]">Loading business information…</p>
-          ) : businessLines.length ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {businessLines.map((line) => (
-                <div
-                  key={line.id}
-                  className="rounded-lg border border-[#E4E9F2] bg-[#FBFCFE] p-3 text-sm"
-                >
-                  <p className="truncate font-medium text-[#2E3D5B]">{line.id}</p>
-                  <p className="mt-1 text-[#5C6B84]">
-                    Industry (MCC): <span className="font-medium text-[#364761]">{industryLabelFromCode(line.industryCode)}</span>
-                  </p>
-                  <p className="mt-1 truncate text-[#5C6B84]">
-                    Website: <span className="font-medium text-[#364761]">{webAddressesFromBusinessLine(line)}</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="No business information yet"
-              message={
-                businessLinesError
-                  ? "Fix the lookup issue before you can add business information."
-                  : "Add your business name, website, and industry to continue."
-              }
-            />
-          )}
-        </div>
-      </section>
-
-      <section
-        className={`ca-panel overflow-hidden shadow-sm ${
-          allCapabilitiesSatisfied
-            ? "border-[#D6DEEE] bg-gradient-to-br from-[#F4F7FD] via-[#EEF2FA] to-white"
-            : "border-[#BFD2FF] bg-gradient-to-br from-[#EEF4FF] via-[#E6EEFF] to-white"
-        }`}
-      >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            {allCapabilitiesSatisfied ? (
-              <p className="inline-flex rounded-full border border-[#D6DEEE] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#43516B]">
-                Completed
-              </p>
-            ) : (
-              <p className="inline-flex rounded-full border border-[#D5E2FF] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#3957A5]">
-                Next step
-              </p>
-            )}
-            <h2 className="mt-3 text-2xl font-semibold text-[#1E3058]">
-              {allCapabilitiesSatisfied ? "Hosted Onboarding Complete" : "Complete Hosted Onboarding"}
+            <h2 className="ca-section-title">
+              {allCapabilitiesSatisfied ? "Hosted Onboarding Complete" : "Hosted Onboarding"}
             </h2>
             {!allCapabilitiesSatisfied ? (
-              <p className="mt-2 max-w-2xl text-sm text-[#4E6187]">
-                Open Adyen's hosted flow to submit verification details, add transfer instruments, and accept terms so
-                your account can move toward fully enabled capabilities.
+              <p className="mt-2 max-w-2xl text-sm text-[#5C6B84]">
+                Open Hosted Onboarding to submit verification details, add transfer instruments, and accept terms and
+                conditions to enable capabilities.
               </p>
             ) : null}
           </div>
           <button
             type="button"
             onClick={launchHostedOnboarding}
-            className="ca-button-dark h-12 w-full px-6 text-base font-semibold shadow md:w-auto"
+            className="ca-button-dark h-10 w-full px-5 md:w-auto"
           >
             {allCapabilitiesSatisfied ? "Reopen Hosted Onboarding" : "Launch Hosted Onboarding"}
           </button>
@@ -441,7 +227,7 @@ export default function OnboardingContent() {
                                 <button
                                   type="button"
                                   id={`${panelId}-trigger`}
-                                  className="inline-flex items-center gap-1 rounded-md text-left text-xs font-semibold text-[#3957A5] outline-none ring-[#3957A5] ring-offset-2 focus-visible:ring-2"
+                                  className="inline-flex items-center gap-1 rounded-md text-left text-xs font-semibold text-red-600 outline-none ring-red-600 ring-offset-2 focus-visible:ring-2"
                                   aria-expanded={isExpanded}
                                   aria-controls={panelId}
                                   onClick={() =>
@@ -451,7 +237,7 @@ export default function OnboardingContent() {
                                   }
                                 >
                                   <ChevronRight
-                                    className={`h-4 w-4 shrink-0 text-[#4E6187] transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                                    className={`h-4 w-4 shrink-0 text-red-600 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
                                     aria-hidden
                                   />
                                   Failures

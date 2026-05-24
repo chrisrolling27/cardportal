@@ -1,5 +1,6 @@
 import "./globals.css";
 import AppProviders from "@/components/AppProviders";
+import { Analytics } from "@vercel/analytics/next";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={inter.variable}>
         <AppProviders>{children}</AppProviders>
+        <Analytics />
       </body>
     </html>
   );

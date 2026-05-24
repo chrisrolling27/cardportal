@@ -199,7 +199,6 @@ export default function CardWalletViewer({
           <div className="mx-auto w-full max-w-[460px] rounded-[28px] border border-[#D8E2F2] bg-gradient-to-br from-[#F9FBFF] via-[#F0F5FF] to-[#F8FAFF] p-6 text-center shadow-[0_30px_70px_-42px_rgba(26,48,92,0.28)]">
             <div className="mx-auto h-[180px] w-full max-w-[300px] rounded-2xl border border-dashed border-[#B7C7E6] bg-[#EDF3FF]" />
             <p className="mt-4 text-base font-semibold text-[#0F1D3D]">No cards issued yet</p>
-            <p className="mt-1 text-sm text-[#5C6B84]">Create your first virtual card</p>
           </div>
         ) : (
           <>
@@ -234,21 +233,21 @@ export default function CardWalletViewer({
                 </button>
 
                 <div className="relative mx-auto h-[252px] w-full max-w-[380px] [perspective:1200px]">
-                  {canRotate ? (
-                    <>
-                      <div
-                        aria-hidden="true"
-                        className={`pointer-events-none absolute left-0 top-0 h-[220px] w-full rounded-2xl bg-gradient-to-br ${cardGradient(
-                          activeCard?.card?.brand
-                        )} border border-white/10 opacity-25 shadow-[0_18px_34px_-26px_rgba(11,18,34,0.65)] transition-all duration-500 [transform:translateX(3px)_translateY(6px)_scale(0.96)] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]`}
-                      />
-                      <div
-                        aria-hidden="true"
-                        className={`pointer-events-none absolute left-0 top-0 h-[220px] w-full rounded-2xl bg-gradient-to-br ${cardGradient(
-                          activeCard?.card?.brand
-                        )} border border-white/12 opacity-50 shadow-[0_22px_40px_-28px_rgba(11,18,34,0.7)] transition-all duration-500 [transform:translateX(2px)_translateY(4px)_scale(0.98)] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]`}
-                      />
-                    </>
+                  {walletCards.length >= 3 ? (
+                    <div
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute left-0 top-0 h-[220px] w-full rounded-2xl bg-gradient-to-br ${cardGradient(
+                        activeCard?.card?.brand
+                      )} border border-white/10 opacity-25 shadow-[0_18px_34px_-26px_rgba(11,18,34,0.65)] transition-all duration-500 [transform:translateX(3px)_translateY(6px)_scale(0.96)] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]`}
+                    />
+                  ) : null}
+                  {walletCards.length >= 2 ? (
+                    <div
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute left-0 top-0 h-[220px] w-full rounded-2xl bg-gradient-to-br ${cardGradient(
+                        activeCard?.card?.brand
+                      )} border border-white/12 opacity-50 shadow-[0_22px_40px_-28px_rgba(11,18,34,0.7)] transition-all duration-500 [transform:translateX(2px)_translateY(4px)_scale(0.98)] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]`}
+                    />
                   ) : null}
 
                   <div

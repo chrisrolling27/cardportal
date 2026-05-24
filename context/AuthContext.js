@@ -13,6 +13,7 @@ function normalizeSession(data) {
     accountHolderId: data?.accountHolderId || "",
     balanceAccountId: data?.balanceAccountId || "",
     legalEntityId: data?.legalEntityId || "",
+    transferInstrumentId: data?.transferInstrumentId || "",
     email: data?.email || "",
     companyName: data?.companyName || "Business",
     capabilities: data?.capabilities || {},

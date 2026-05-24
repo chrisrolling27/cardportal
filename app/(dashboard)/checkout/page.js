@@ -125,7 +125,7 @@ function createRandomItem() {
 function createRandomOrder() {
   return {
     item: createRandomItem(),
-    amountMinor: Math.floor(Math.random() * 37401) + 2500,
+    amountMinor: Math.floor(Math.random() * 17501) + 2500,
     currency: "USD",
     reference: generateOrderReference(),
   };
@@ -208,7 +208,7 @@ export default function CheckoutPage() {
           const overview = await trackedFetch(
             `/api/adyen/account-overview?balanceAccountId=${encodeURIComponent(user.balanceAccountId)}`
           );
-          const { availableMinor, currency } = getAvailableBalanceSnapshot(overview?.balanceAccount);
+          const { availableMinor, currency } = getAvailableBalanceSnapshot(overview);
           failureDetails.latestBalanceMinor = availableMinor;
           failureDetails.latestBalanceCurrency = currency;
           if (currency === order.currency && availableMinor < order.amountMinor) {
@@ -413,7 +413,7 @@ export default function CheckoutPage() {
           });
           if (status === "success") {
             showSuccess(
-              `Payment succesful! Order purchase ${order.reference} for ${formatCurrency(order.amountMinor, order.currency)}.`
+              `Payment successful!\n${order.item}\nOrder ${order.reference} · ${formatCurrency(order.amountMinor, order.currency)}`
             );
             return;
           }
@@ -628,7 +628,7 @@ export default function CheckoutPage() {
 
       <section className="ca-panel">
         <h2 className="ca-section-title">Checkout</h2>
-        <div className="mt-4 rounded-xl border border-[#E4E9F2] bg-white p-4">
+        <div className="mt-4 rounded-xl bg-white p-4">
           {loadingDropin ? <p className="text-sm text-[#5C6B84]">Initializing secure payment form...</p> : null}
           {initError ? (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">

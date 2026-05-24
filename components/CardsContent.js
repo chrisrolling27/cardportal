@@ -151,7 +151,11 @@ export default function CardsContent() {
       setReference("");
       await loadCards();
     } catch (error) {
-      const message = getApiErrorMessage(error) || "Failed to create card.";
+      const rawMessage = getApiErrorMessage(error) || "";
+      const isMissingCapability = /capabilit(y|ies)/i.test(rawMessage) || /not allowed/i.test(rawMessage);
+      const message = isMissingCapability
+        ? "Card issuing isn't enabled yet because this account holder hasn't completed onboarding. Adyen requires verified KYB/KYC info before the issueCardCommercial capability is granted. Open the Onboarding tab and launch Hosted Onboarding to submit the required business and signatory details — once Adyen marks the capability as allowed, card creation will work."
+        : rawMessage || "Failed to create card.";
       setCardsError(message);
       showError(message);
     } finally {
@@ -161,6 +165,19 @@ export default function CardsContent() {
 
   return (
     <div className="space-y-6">
+      <CardWalletViewer
+        cards={cards}
+        loading={cardsLoading}
+        error={cardsError}
+        revealByCardId={revealByCardId}
+        revealLoadingByCardId={revealLoadingByCardId}
+        revealErrorByCardId={revealErrorByCardId}
+        onRevealCardDetails={revealCardDetails}
+        onRetry={loadCards}
+        title="Wallet"
+        subtitle=""
+      />
+
       <section className="ca-panel">
         <h2 className="ca-section-title">Issue card</h2>
         <p className="mt-1 text-sm text-[#5C6B84]">
@@ -168,11 +185,7 @@ export default function CardsContent() {
           {user?.balanceAccountId || DEFAULT_BA_REFERENCE}
         </p>
         <form onSubmit={createCard} className="mt-4 space-y-4">
-          <div
-            className={`rounded-2xl bg-gradient-to-r p-[1px] ${
-              canCreateMoreCards ? selectedBrandConfig.accent : "from-[#C7CEDB] to-[#A8B3C7]"
-            }`}
-          >
+          <div>
             <div className="rounded-2xl bg-white p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]">Network</p>
@@ -255,19 +268,6 @@ export default function CardsContent() {
           </div>
         </form>
       </section>
-
-      <CardWalletViewer
-        cards={cards}
-        loading={cardsLoading}
-        error={cardsError}
-        revealByCardId={revealByCardId}
-        revealLoadingByCardId={revealLoadingByCardId}
-        revealErrorByCardId={revealErrorByCardId}
-        onRevealCardDetails={revealCardDetails}
-        onRetry={loadCards}
-        title="Wallet"
-        subtitle=""
-      />
 
       <Toast toast={toast} onClose={clearToast} />
     </div>

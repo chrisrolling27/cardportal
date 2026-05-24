@@ -6,24 +6,26 @@ import { useApiHistory } from "@/context/ApiHistoryContext";
 import { formatTime } from "@/lib/utils";
 
 export default function ApiHistoryContent() {
-  const { entries, clear } = useApiHistory();
+  const { entries } = useApiHistory();
   const [selected, setSelected] = useState(null);
 
   return (
     <div className="space-y-6">
       <section className="ca-surface overflow-hidden">
-        <div className="flex justify-end border-b border-[#EDF1F7] p-4">
-          <button className="ca-button-secondary px-3 py-1 text-xs" onClick={clear}>
-            Clear History
-          </button>
-        </div>
         <div className="overflow-x-auto">
-          <table className="ca-table">
+          <table className="ca-table table-fixed">
+            <colgroup>
+              <col className="w-[80px]" />
+              <col className="w-[260px]" />
+              <col />
+              <col className="w-[96px]" />
+              <col className="w-[88px]" />
+            </colgroup>
             <thead className="bg-[#F8FAFD]">
               <tr>
                 <th className="ca-th">Method</th>
                 <th className="ca-th">Endpoint</th>
-                <th className="ca-th">Detail</th>
+                <th className="ca-th">Description</th>
                 <th className="ca-th">Status</th>
                 <th className="ca-th">Time</th>
               </tr>
@@ -38,12 +40,16 @@ export default function ApiHistoryContent() {
                   <td className="ca-td">
                     <MethodBadge method={entry.method} />
                   </td>
-                  <td className="ca-td font-mono text-xs">{entry.endpoint}</td>
-                  <td className="ca-td">{entry.detail}</td>
-                  <td className={`ca-td font-semibold ${entry.status < 400 ? "text-[#058B3C]" : "text-[#C0392B]"}`}>
+                  <td className="ca-td truncate font-mono text-xs" title={entry.endpoint}>
+                    {entry.endpoint}
+                  </td>
+                  <td className="ca-td truncate" title={entry.detail}>
+                    {entry.detail}
+                  </td>
+                  <td className={`ca-td whitespace-nowrap font-semibold ${entry.status < 400 ? "text-[#058B3C]" : "text-[#C0392B]"}`}>
                     {entry.status < 400 ? `${entry.status} OK` : `${entry.status} FAIL`}
                   </td>
-                  <td className="ca-td">{formatTime(entry.timestamp)}</td>
+                  <td className="ca-td whitespace-nowrap">{formatTime(entry.timestamp)}</td>
                 </tr>
               ))}
             </tbody>
@@ -66,13 +72,21 @@ export default function ApiHistoryContent() {
                   <p className="text-sm font-medium">Request Body</p>
                   <button
                     className="text-xs underline"
-                    onClick={() => navigator.clipboard.writeText(JSON.stringify(selected.requestBody || {}, null, 2))}
+                    onClick={() =>
+                      navigator.clipboard.writeText(
+                        selected.method === "GET" || selected.requestBody == null
+                          ? ""
+                          : JSON.stringify(selected.requestBody, null, 2)
+                      )
+                    }
                   >
                     Copy
                   </button>
                 </div>
                 <pre className="max-h-72 overflow-auto rounded-lg bg-[#F8FAFD] p-3 text-xs">
-                  {JSON.stringify(selected.requestBody, null, 2)}
+                  {selected.method === "GET" || selected.requestBody == null
+                    ? ""
+                    : JSON.stringify(selected.requestBody, null, 2)}
                 </pre>
               </div>
               <div>
