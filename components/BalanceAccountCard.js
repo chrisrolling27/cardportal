@@ -1,9 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
-
-const COPY_RESET_MS = 1500;
 
 const MUTED = "text-[#70819D]";
 const BORDER = "border-[#E4E9F2]";
@@ -128,39 +125,14 @@ export default function BalanceAccountCard({
 
       <div className={`mt-7 border-t ${BORDER} pt-4`}>
         <div className="space-y-2">
-          {ids.map((item) => {
-            const isCopied = copiedKey === item.key;
-            const canCopy = item.value !== "—";
-            return (
-              <div key={item.key} className="flex items-center justify-between gap-4">
-                <p className={`text-xs ${MUTED}`}>{item.label}</p>
-                <button
-                  type="button"
-                  onClick={() => copyValue(item.key, canCopy ? item.value : "")}
-                  className={`max-w-[55%] text-right font-mono text-[11px] transition-colors ${
-                    canCopy
-                      ? isCopied
-                        ? "cursor-pointer text-[#0B8A3A]"
-                        : "cursor-pointer text-[#5C6B84] hover:text-[#1F2F4A]"
-                      : "cursor-not-allowed text-[#9AA8BF]"
-                  }`}
-                  disabled={!canCopy}
-                  aria-label={`Copy ${item.label}`}
-                >
-                  <span className="break-all">{item.value}</span>
-                  {isCopied ? (
-                    <>
-                      <span
-                        className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#0B8A3A]"
-                        aria-hidden
-                      />
-                      <span className="sr-only">Copied</span>
-                    </>
-                  ) : null}
-                </button>
-              </div>
-            );
-          })}
+          {ids.map((item) => (
+            <div key={item.key} className="flex items-center justify-between gap-4">
+              <p className={`text-xs ${MUTED}`}>{item.label}</p>
+              <span className="max-w-[55%] select-all break-all text-right font-mono text-[11px] text-[#5C6B84]">
+                {item.value}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
