@@ -180,7 +180,6 @@ export default function CheckoutPage() {
   const dropinRef = useRef(null);
   const dropinReadyRef = useRef(false);
   const initSequenceRef = useRef(0);
-  const restoreFetchRef = useRef(null);
 
   const orderAmount = useMemo(
     () => formatCurrency(order.amountMinor, order.currency),
@@ -316,12 +315,6 @@ export default function CheckoutPage() {
       const checkout = await createCheckout({
         environment: "test",
         clientKey,
-        analytics: {
-          enabled: false,
-          analyticsData: {
-            checkoutAttemptId: order.reference,
-          },
-        },
         risk: {
           enabled: false,
         },
@@ -512,42 +505,6 @@ export default function CheckoutPage() {
   ]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    if (restoreFetchRef.current) return restoreFetchRef.current;
-
-    const originalFetch = window.fetch.bind(window);
-    const shimmedFetch = async (input, init) => {
-      const url =
-        typeof input === "string"
-          ? input
-          : input && typeof input === "object" && "url" in input
-            ? input.url
-            : "";
-
-      if (url.includes("checkoutanalytics-test.adyen.com/checkoutanalytics/v3/analytics")) {
-        const baseId = Date.now().toString(36);
-        const random = Math.random().toString(36).slice(2, 10);
-        const isAttemptIdRequest = /\/v3\/analytics\?/.test(url);
-        const body = isAttemptIdRequest ? { checkoutAttemptId: `local_${baseId}_${random}` } : {};
-        return new Response(JSON.stringify(body), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      return originalFetch(input, init);
-    };
-
-    window.fetch = shimmedFetch;
-    const restore = () => {
-      window.fetch = originalFetch;
-      restoreFetchRef.current = null;
-    };
-    restoreFetchRef.current = restore;
-    return restore;
-  }, []);
-
-  useEffect(() => {
     loadCards();
   }, [loadCards]);
 
@@ -628,7 +585,7 @@ export default function CheckoutPage() {
 
       <section className="ca-panel">
         <h2 className="ca-section-title">Checkout</h2>
-        <div className="mt-4 rounded-xl bg-white p-4">
+        <div className="rounded-xl bg-white p-4">
           {loadingDropin ? <p className="text-sm text-[#5C6B84]">Initializing secure payment form...</p> : null}
           {initError ? (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -638,7 +595,7 @@ export default function CheckoutPage() {
               </button>
             </div>
           ) : null}
-          <div id="dropin-container" ref={containerRef} className={loadingDropin || initError ? "hidden" : ""} />
+          <div id="dropin-container" ref={containerRef} />
         </div>
       </section>
 

@@ -220,7 +220,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
     <div>
       <h2 className="ca-section-title">Transfer Funds</h2>
 
-      <form onSubmit={submitTransfer} className="mt-3 grid gap-2">
+      <form onSubmit={submitTransfer} className="grid gap-2">
         <label className="text-xs font-medium text-[#3B4556]">Source</label>
         <select
           className="ca-input"

@@ -147,7 +147,7 @@ export default function OnboardingContent() {
     <div className="space-y-6">
       <section className="ca-panel">
         <h2 className="ca-section-title">Account Holder</h2>
-        <ul className="mt-4 space-y-2 text-sm text-[#2E3D5B]">
+        <ul className="space-y-2 text-sm text-[#2E3D5B]">
           <li>
             <span className="font-semibold">Email:</span> <span className="break-all">{email}</span>
           </li>
@@ -193,7 +193,7 @@ export default function OnboardingContent() {
       </section>
 
       <section className="ca-panel">
-        <h2 className="ca-section-title mb-4">Capabilities</h2>
+        <h2 className="ca-section-title">Capabilities</h2>
         {capabilities.length === 0 ? (
           <EmptyState title="No capabilities found" message="Login session did not include capability data." />
         ) : (
