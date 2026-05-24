@@ -305,6 +305,23 @@ export default function CheckoutPage() {
       const adyenModule = await import("@adyen/adyen-web");
       await import("@adyen/adyen-web/styles/adyen.css");
 
+      if (typeof window !== "undefined" && !window.__adyenAnalyticsStubInstalled) {
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const url = typeof input === "string" ? input : input?.url || "";
+          if (url.includes("checkoutanalytics") && url.includes("adyen.com")) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({ checkoutAttemptId: `stub-${Date.now()}` }),
+                { status: 200, headers: { "Content-Type": "application/json" } }
+              )
+            );
+          }
+          return originalFetch(input, init);
+        };
+        window.__adyenAnalyticsStubInstalled = true;
+      }
+
       if (sequence !== initSequenceRef.current) return;
 
       const createCheckout = adyenModule.default || adyenModule.AdyenCheckout;
