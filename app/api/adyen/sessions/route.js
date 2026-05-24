@@ -1,5 +1,16 @@
 import { adyenSessionRequest } from "@/lib/adyen";
 
+function resolveAllowOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (origin) return origin.trim();
+  const host = request.headers.get("host");
+  if (host) {
+    const proto = request.headers.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+    return `${proto}://${host}`;
+  }
+  return String(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").trim();
+}
+
 function diagnosticsFor(error, body) {
   const status = error?.status || 500;
   const roles = body?.policy?.roles || [];
@@ -36,7 +47,7 @@ export async function POST(request) {
   let body = null;
   try {
     const { accountHolderId, legalEntityId, roles, product } = await request.json();
-    const allowOrigin = String(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").trim();
+    const allowOrigin = resolveAllowOrigin(request);
 
     body = {
       allowOrigin,
