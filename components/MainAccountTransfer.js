@@ -255,7 +255,7 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
           ))}
         </select>
 
-        <div className="mt-3 flex min-h-[42px] overflow-hidden rounded-lg border border-[#D8DFEA] bg-white transition focus-within:border-[#2575FC] focus-within:ring-2 focus-within:ring-[#2575FC]/15">
+        <div className="mt-5 flex min-h-[42px] overflow-hidden rounded-lg border border-[#D8DFEA] bg-white transition focus-within:border-[#2575FC] focus-within:ring-2 focus-within:ring-[#2575FC]/15">
           <span
             className="flex shrink-0 items-center border-r border-[#D8DFEA] bg-[#FBFCFF] px-3 text-sm font-medium text-[#5C6B84]"
             aria-hidden="true"

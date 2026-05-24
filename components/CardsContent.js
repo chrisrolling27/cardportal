@@ -184,7 +184,7 @@ export default function CardsContent() {
           Create up to {MAX_PAYMENT_INSTRUMENTS} payment instruments to spend funds from{" "}
           {user?.balanceAccountId || DEFAULT_BA_REFERENCE}
         </p>
-        <form onSubmit={createCard} className="mt-4 space-y-4">
+        <form onSubmit={createCard} className="mt-5 space-y-5">
           <div>
             <div className="rounded-2xl bg-white p-4">
               <div className="flex items-center justify-between">
@@ -236,34 +236,34 @@ export default function CardsContent() {
             })}
           </div>
 
-          <div className="grid gap-2 md:max-w-2xl">
-            <label htmlFor="card-reference" className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]">
-              Reference
-            </label>
-            <div className="flex flex-row flex-wrap items-end gap-2">
-              <input
-                id="card-reference"
-                type="text"
-                value={reference}
-                onChange={(event) => setReference(event.target.value)}
-                className="ca-input min-h-10 min-w-0 flex-1"
-                disabled={isCreating}
-                maxLength={20}
-              />
-              <button
-                type="submit"
-                className="ca-button-dark h-10 shrink-0 px-4 sm:px-5"
-                disabled={isIssueCardDisabled}
-              >
-                {isCreating ? "Creating..." : "Issue payment instrument"}
-              </button>
-            </div>
-            <p
-              className={`text-right text-xs font-semibold ${
-                isIssueCardDisabled ? "text-[#94A3B8]" : "text-[#334155]"
-              }`}
+          <div className="md:max-w-2xl">
+            <label
+              htmlFor="card-reference"
+              className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5C6B84]"
             >
-              {cardsCount}/{MAX_PAYMENT_INSTRUMENTS} issued
+              Card Reference (optional)
+            </label>
+            <input
+              id="card-reference"
+              type="text"
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+              className="ca-input mt-2 h-11 text-sm"
+              placeholder="order 24601"
+              disabled={isCreating}
+              maxLength={20}
+            />
+            <button
+              type="submit"
+              className="ca-button mt-4 h-11 w-full text-sm sm:w-auto sm:px-6"
+              disabled={isIssueCardDisabled}
+            >
+              {isCreating ? "Creating..." : "Issue payment instrument"}
+            </button>
+            <p className="mt-2 text-xs font-semibold text-[#5C6B84]">
+              {!canCreateMoreCards
+                ? `${cardsCount}/${MAX_PAYMENT_INSTRUMENTS} issued — wallet full, cannot issue more payment instruments.`
+                : `${cardsCount}/${MAX_PAYMENT_INSTRUMENTS} issued`}
             </p>
           </div>
         </form>

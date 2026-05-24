@@ -272,7 +272,6 @@ export default function PayoutsPage() {
 
           <form onSubmit={submitSweep} className="rounded-xl border border-[#EDF1F7] bg-white p-5">
             <h3 className="text-sm font-semibold text-[#00112C]">{hasSweep ? "Edit Sweep" : "Setup Sweep"}</h3>
-            <p className="ca-muted mt-1 text-xs">Source and destination are selected automatically for this user.</p>
 
             <div className="mt-4 grid gap-3">
               <div className="rounded-lg border border-[#EDF1F7] bg-[#FBFCFF] px-3 py-2 text-sm">

@@ -173,7 +173,7 @@ export default function OnboardingContent() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="ca-section-title">
-              {allCapabilitiesSatisfied ? "Hosted Onboarding Complete" : "Hosted Onboarding"}
+              {allCapabilitiesSatisfied ? "Hosted Onboarding Complete! ✅" : "Hosted Onboarding"}
             </h2>
             {!allCapabilitiesSatisfied ? (
               <p className="mt-2 max-w-2xl text-sm text-[#5C6B84]">
