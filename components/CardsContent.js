@@ -138,7 +138,7 @@ export default function CardsContent() {
     try {
       setIsCreating(true);
       setCardsError("");
-      await trackedFetch("/api/adyen/cards", {
+      const created = await trackedFetch("/api/adyen/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,7 +147,15 @@ export default function CardsContent() {
           reference: reference.trim(),
         }),
       });
-      showSuccess("Card created!");
+      const createdBrand = String(created?.card?.brand || brand).toLowerCase();
+      const brandLabel = createdBrand === "visa" ? "Visa" : "Mastercard";
+      const lastFour = created?.card?.lastFour || "";
+      const createdReference = created?.reference || "";
+      let message = `${brandLabel} ${lastFour} created successfully!`;
+      if (createdReference) {
+        message += ` with ${createdReference}`;
+      }
+      showSuccess(message);
       setReference("");
       await loadCards();
     } catch (error) {
@@ -262,7 +270,7 @@ export default function CardsContent() {
             </button>
             <p className="mt-2 text-xs font-semibold text-[#5C6B84]">
               {!canCreateMoreCards
-                ? `${cardsCount}/${MAX_PAYMENT_INSTRUMENTS} issued — wallet full, cannot issue more payment instruments.`
+                ? `${cardsCount}/${MAX_PAYMENT_INSTRUMENTS} issued: wallet full!`
                 : `${cardsCount}/${MAX_PAYMENT_INSTRUMENTS} issued`}
             </p>
           </div>
