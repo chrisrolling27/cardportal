@@ -26,17 +26,15 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
   const availableTransferInstrumentIds = useMemo(() => {
     const sendTransferInstruments = sendToTransferInstrumentCapability?.transferInstruments || [];
     const receiveTransferInstruments = receiveFromTransferInstrumentCapability?.transferInstruments || [];
-    const all = [...sendTransferInstruments, ...receiveTransferInstruments];
-    return [
-      ...new Set(
-        all
-          .filter((instrument) => instrument?.id && instrument?.allowed !== false)
-          .map((instrument) => instrument.id)
-      ),
-    ];
+    const fromCapabilities = [...sendTransferInstruments, ...receiveTransferInstruments]
+      .filter((instrument) => instrument?.id && instrument?.allowed !== false)
+      .map((instrument) => instrument.id);
+    const all = [...fromCapabilities, user?.transferInstrumentId].filter(Boolean);
+    return [...new Set(all)];
   }, [
     receiveFromTransferInstrumentCapability?.transferInstruments,
     sendToTransferInstrumentCapability?.transferInstruments,
+    user?.transferInstrumentId,
   ]);
   const endpointOptions = useMemo(() => {
     const balanceAccountId = availableBalanceAccountIds[0];
@@ -75,17 +73,16 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
   const amountMinorRounded = Number.isFinite(amountNumber) ? Math.round(amountNumber * 100) : NaN;
   const hasAmountInRange =
     Number.isFinite(amountMinorRounded) && amountMinorRounded >= 100 && amountMinorRounded <= 999_999;
+  const sourceForUi = form.sourceKey ? endpointByKey[form.sourceKey] : null;
+  const recipientForUi = form.recipientKey ? endpointByKey[form.recipientKey] : null;
+  const isTopUpDirection =
+    sourceForUi?.type === "transferInstrument" && recipientForUi?.type === "balanceAccount";
   const canSubmit =
     !isSubmitting &&
     Boolean(form.sourceKey) &&
     Boolean(form.recipientKey) &&
     form.sourceKey !== form.recipientKey &&
     hasAmountInRange;
-
-  const sourceForUi = form.sourceKey ? endpointByKey[form.sourceKey] : null;
-  const recipientForUi = form.recipientKey ? endpointByKey[form.recipientKey] : null;
-  const isTopUpDirection =
-    sourceForUi?.type === "transferInstrument" && recipientForUi?.type === "balanceAccount";
 
   useEffect(() => {
     const defaultSource =
@@ -140,15 +137,11 @@ export default function MainAccountTransfer({ onTransferComplete, onSuccess, onE
       sourceEndpoint.type === "balanceAccount" && recipientEndpoint.type === "transferInstrument";
     const isTransferInstrumentToBalance =
       sourceEndpoint.type === "transferInstrument" && recipientEndpoint.type === "balanceAccount";
-    if (isBalanceToTransferInstrument && !canSendToTransferInstrument) {
-      const message = "sendToTransferInstrument capability is required for Balance Account to Transfer Instrument transfers.";
-      setError(message);
-      if (onError) onError(message);
-      return;
-    }
-    if (isTransferInstrumentToBalance && !canReceiveFromTransferInstrument) {
-      const message =
-        "receiveFromTransferInstrument capability is required for Transfer Instrument to Balance Account transfers.";
+    if (
+      (isBalanceToTransferInstrument && !canSendToTransferInstrument) ||
+      (isTransferInstrumentToBalance && !canReceiveFromTransferInstrument)
+    ) {
+      const message = "Complete KYC in the Onboarding tab first!";
       setError(message);
       if (onError) onError(message);
       return;
