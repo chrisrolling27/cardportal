@@ -9,7 +9,6 @@ import { useApiHistory } from "@/context/ApiHistoryContext";
 export default function ReportsPage() {
   const { trackedFetch } = useApiHistory();
   const [reportsAccountHolderId, setReportsAccountHolderId] = useState("");
-  const [reportsBalanceAccountId, setReportsBalanceAccountId] = useState("");
   const [error, setError] = useState("");
   const [errorHint, setErrorHint] = useState("");
 
@@ -22,11 +21,7 @@ export default function ReportsPage() {
         if (!accountHolder?.id) {
           throw new Error("Configured reports account holder was not found.");
         }
-        if (!accountHolder?.reportsBalanceAccountId) {
-          throw new Error("Configured reports balance account was not found.");
-        }
         setReportsAccountHolderId(accountHolder.id);
-        setReportsBalanceAccountId(accountHolder.reportsBalanceAccountId);
       } catch (err) {
         setError(err.message);
         setErrorHint(err?.payload?.diagnostics?.hint || "");
@@ -44,14 +39,13 @@ export default function ReportsPage() {
           {errorHint ? <p className="font-medium">{errorHint}</p> : null}
           <p>{error}</p>
         </div>
-      ) : !reportsAccountHolderId || !reportsBalanceAccountId ? (
+      ) : !reportsAccountHolderId ? (
         <LoadingSkeleton className="h-64 w-full" />
       ) : (
         <section>
           <AdyenComponentMount
             componentName="ReportsOverview"
             accountHolderId={reportsAccountHolderId}
-            balanceAccountId={reportsBalanceAccountId}
             roles={["Reports Overview Component: View"]}
           />
         </section>

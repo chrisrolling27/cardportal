@@ -21,7 +21,7 @@ Styled with **Tailwind CSS** using an Adyen brand palette (green/navy/black). Al
 
 ## Environment Variables (`.env.local`)
 
-Eleven variables total:
+Ten variables total:
 
 ```properties
 PORT
@@ -37,14 +37,13 @@ ADYEN_BRAND_VARIANT_VISA
 ADYEN_BRAND_VARIANT_MASTERCARD
 
 REPORTS_ACCOUNTHOLDER_ID
-REPORTS_BALANCE_ACCOUNT_ID
 ```
 
 - `ADYEN_PLATFORM_API_KEY` — used for BCL (`/bcl/v2`), LEM (`/lem/v3`, `/lem/v4`), Transfers (`/btl/v4`), and Session Authentication (`authe/api/v1`)
 - `ADYEN_PAYMENTS_API_KEY` — used for Checkout (`/v71`) — Drop-in sessions, payments, top-up
 - `NEXT_PUBLIC_ADYEN_CLIENT_KEY` — Web SDK client key for Drop-in
 - `ADYEN_BRAND_VARIANT_VISA` / `_MASTERCARD` — brand variant strings used when issuing new cards (configurable so the same code works against different Adyen test profiles)
-- `REPORTS_ACCOUNTHOLDER_ID` / `REPORTS_BALANCE_ACCOUNT_ID` — hardcoded platform-level AH/BA used by the Reports tab (independent of the logged-in user)
+- `REPORTS_ACCOUNTHOLDER_ID` — hardcoded platform-level AH used by the Reports tab and the Sweeps tab's embedded `PayoutsOverview` (independent of the logged-in user, since new users have no report/payout history to display)
 
 ---
 
@@ -113,7 +112,7 @@ Storefront simulator using **Adyen Web Drop-in v6**. Generates a random themed o
 Embedded **Payouts Overview** Adyen component + sweep configuration UI hitting `/api/adyen/sweeps` (GET list + POST create). Supports push/pull sweeps with daily/weekly/monthly/cron/balance schedules tied to a transfer instrument.
 
 ### Reports (`/reports`)
-Uses the **Reports Account Holder** from env (not the logged-in user). Fetches `/api/adyen/reports/account-holder` and `/api/adyen/reports/balance-accounts`, then mounts a Transactions Overview component scoped to that AH. Surfaces diagnostic hints from API errors.
+Uses the **Reports Account Holder** from env (not the logged-in user). Fetches `/api/adyen/reports/account-holder` and mounts a `ReportsOverview` component scoped to that AH. Surfaces diagnostic hints from API errors.
 
 ### API History (`/apihistory`, code at `/api-history/page.js`)
 Renders `ApiHistoryContent`. Clean table of every client-side API call, fed by `ApiHistoryContext`'s `trackedFetch` wrapper. Columns: colored Method badge, endpoint, smart "detail" summary, status, timestamp. Click a row to see full request/response JSON. Filters by method and success/fail.

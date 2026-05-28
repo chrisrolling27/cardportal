@@ -11,6 +11,7 @@ export default function PayoutsPage() {
   const { user } = useAuth();
   const { trackedFetch } = useApiHistory();
   const [sweep, setSweep] = useState(null);
+  const [reportsAccountHolderId, setReportsAccountHolderId] = useState("");
   const [isLoadingSweep, setIsLoadingSweep] = useState(true);
   const [isSubmittingSweep, setIsSubmittingSweep] = useState(false);
   const [isDeletingSweep, setIsDeletingSweep] = useState(false);
@@ -80,6 +81,18 @@ export default function PayoutsPage() {
     loadSweep();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.accountHolderId, user?.balanceAccountId]);
+
+  useEffect(() => {
+    const loadReportsAccountHolder = async () => {
+      try {
+        const data = await trackedFetch("/api/adyen/reports/account-holder");
+        if (data?.id) setReportsAccountHolderId(data.id);
+      } catch {
+        // Fall back to no PayoutsOverview mount if the hardcoded AH is unavailable.
+      }
+    };
+    loadReportsAccountHolder();
+  }, [trackedFetch]);
 
   useEffect(() => {
     if (!sweep) {
@@ -338,18 +351,20 @@ export default function PayoutsPage() {
 
       </section>
 
-      <section>
-        <AdyenComponentMount
-          componentName="PayoutsOverview"
-          accountHolderId={user.accountHolderId}
-          roles={["Payouts Overview Component: View"]}
-          fallback={
-            <p className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
-              Payouts component could not load. This can happen if payouts are not configured yet.
-            </p>
-          }
-        />
-      </section>
+      {reportsAccountHolderId ? (
+        <section>
+          <AdyenComponentMount
+            componentName="PayoutsOverview"
+            accountHolderId={reportsAccountHolderId}
+            roles={["Payouts Overview Component: View"]}
+            fallback={
+              <p className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+                Payouts component could not load. This can happen if payouts are not configured yet.
+              </p>
+            }
+          />
+        </section>
+      ) : null}
 
       <Toast toast={toast} onClose={clearToast} />
     </div>
