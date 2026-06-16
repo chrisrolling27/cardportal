@@ -15,6 +15,7 @@ export default function LandingPage() {
     if (user) router.replace("/account");
   }, [router, user]);
 
+  //
   if (restoring) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
