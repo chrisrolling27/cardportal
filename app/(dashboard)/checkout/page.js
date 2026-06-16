@@ -80,6 +80,7 @@ const WORLD_WONDERS_AND_ATTRACTIONS = [
 const CUSTOM_ROUTING_FLAG = "adyenIssuedTestCard";
 const SUCCESS_RESULT_CODES = new Set(["Authorised"]);
 const PROCESSING_RESULT_CODES = new Set(["Pending", "Received"]);
+const MAX_AMOUNT_DOLLARS = 9999;
 
 function randomChoice(items) {
   return items[Math.floor(Math.random() * items.length)];
@@ -166,6 +167,9 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const { toast, clearToast, showSuccess, showError } = useToast();
   const [order, setOrder] = useState(() => createRandomOrder());
+  const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [amountDraft, setAmountDraft] = useState("");
+  const [amountError, setAmountError] = useState("");
   const [loadingDropin, setLoadingDropin] = useState(true);
   const [initError, setInitError] = useState("");
   const [paymentResult, setPaymentResult] = useState(null);
@@ -568,6 +572,38 @@ export default function CheckoutPage() {
 
   const randomizeOrder = () => {
     setOrder(createRandomOrder());
+    setIsEditingAmount(false);
+    setAmountError("");
+  };
+
+  const startEditingAmount = () => {
+    setAmountDraft((order.amountMinor / 100).toFixed(2));
+    setAmountError("");
+    setIsEditingAmount(true);
+  };
+
+  const cancelEditingAmount = () => {
+    setIsEditingAmount(false);
+    setAmountError("");
+  };
+
+  const saveAmount = () => {
+    const dollars = Number(amountDraft);
+    if (!Number.isFinite(dollars) || amountDraft.trim() === "") {
+      setAmountError("Enter a valid amount.");
+      return;
+    }
+    if (dollars <= 0) {
+      setAmountError("Amount must be greater than $0.");
+      return;
+    }
+    if (dollars > MAX_AMOUNT_DOLLARS) {
+      setAmountError(`Amount cannot exceed ${formatCurrency(MAX_AMOUNT_DOLLARS * 100, order.currency)}.`);
+      return;
+    }
+    setOrder((prev) => ({ ...prev, amountMinor: Math.round(dollars * 100) }));
+    setIsEditingAmount(false);
+    setAmountError("");
   };
 
   return (
@@ -580,13 +616,61 @@ export default function CheckoutPage() {
           <div className="w-full max-w-2xl rounded-lg bg-[#F8FAFD] p-4">
             <div className="space-y-2">
               <p className="text-lg font-extrabold leading-tight text-[#0B1222] md:text-xl">{order.item}</p>
-              <p className="text-xl font-extrabold text-[#0B1222]">Amount: {orderAmount}</p>
+              {isEditingAmount ? (
+                <div className="space-y-1">
+                  <label htmlFor="order-amount" className="block text-sm font-semibold text-[#334155]">
+                    Amount
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-bold text-[#5C6B84]">
+                        $
+                      </span>
+                      <input
+                        id="order-amount"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        max={MAX_AMOUNT_DOLLARS}
+                        step="0.01"
+                        autoFocus
+                        value={amountDraft}
+                        onChange={(event) => setAmountDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") saveAmount();
+                          if (event.key === "Escape") cancelEditingAmount();
+                        }}
+                        className="h-10 w-40 rounded-lg border border-[#CBD5E1] bg-white pl-7 pr-3 text-lg font-extrabold text-[#0B1222] outline-none focus:border-adyen-green focus:ring-2 focus:ring-adyen-green/30"
+                      />
+                    </div>
+                    <button type="button" className="ca-button-dark h-10" onClick={saveAmount}>
+                      Save
+                    </button>
+                    <button type="button" className="ca-button-secondary h-10" onClick={cancelEditingAmount}>
+                      Cancel
+                    </button>
+                  </div>
+                  {amountError ? <p className="text-sm font-medium text-red-600">{amountError}</p> : null}
+                </div>
+              ) : (
+                <p className="text-xl font-extrabold text-[#0B1222]">Amount: {orderAmount}</p>
+              )}
               <p className="break-all text-sm font-medium text-[#334155]">Reference: {order.reference}</p>
             </div>
           </div>
-          <button type="button" className="ca-button-dark h-10" onClick={randomizeOrder}>
-            Randomize
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="ca-button-secondary h-10"
+              onClick={startEditingAmount}
+              disabled={isEditingAmount}
+            >
+              Edit
+            </button>
+            <button type="button" className="ca-button-dark h-10" onClick={randomizeOrder}>
+              Randomize
+            </button>
+          </div>
         </div>
       </section>
 
